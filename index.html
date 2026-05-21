@@ -637,6 +637,11 @@ function auth(){
   var name=document.getElementById('iName').value.trim();
   var btn=document.getElementById('authBtn');
   if(!email||!pass){showErr('أدخل البريد وكلمة المرور');return;}
+  if(typeof firebase==='undefined'||!db){
+    showErr('جاري تحميل البرنامج... انتظر ثم حاول مرة أخرى');
+    tryInitFB();
+    return;
+  }
   btn.disabled=true;btn.textContent='جاري...';
   document.getElementById('loginErr').style.display='none';
   var p = loginMode==='up'
@@ -647,11 +652,19 @@ function auth(){
       })
     : firebase.auth().signInWithEmailAndPassword(email,pass);
   p.catch(function(e){
-    var errs={'auth/user-not-found':'البريد غير مسجل','auth/wrong-password':'كلمة المرور خاطئة',
-      'auth/email-already-in-use':'البريد مسجل مسبقاً','auth/weak-password':'كلمة المرور ضعيفة (6 أحرف على الأقل)',
-      'auth/invalid-email':'البريد غير صحيح','auth/invalid-credential':'البريد أو كلمة المرور خاطئة'};
-    showErr(errs[e.code]||e.message);
-    btn.disabled=false;btn.textContent=loginMode==='in'?'تسجيل الدخول':'إنشاء الحساب';
+    var errs={
+      'auth/user-not-found':'البريد غير مسجل — جرب إنشاء حساب جديد',
+      'auth/wrong-password':'كلمة المرور خاطئة',
+      'auth/email-already-in-use':'البريد مسجل مسبقاً — سجل الدخول',
+      'auth/weak-password':'كلمة المرور ضعيفة (6 أحرف على الأقل)',
+      'auth/invalid-email':'البريد الإلكتروني غير صحيح',
+      'auth/invalid-credential':'البريد أو كلمة المرور خاطئة',
+      'auth/network-request-failed':'خطأ في الشبكة — تحقق من الاتصال',
+      'auth/too-many-requests':'محاولات كثيرة — انتظر قليلاً'
+    };
+    showErr(errs[e.code]||('خطأ: '+e.message));
+    btn.disabled=false;
+    btn.textContent=loginMode==='in'?'تسجيل الدخول':'إنشاء الحساب';
   });
 }
 
@@ -1686,16 +1699,34 @@ fillConvSels();fillRateInputs();calc();renderRates();refreshAll();
 // Open tx modal with init
 document.getElementById('btn-add').onclick=function(){initTxModal();openM('txModal');};
 
-// Init Firebase after page loads
-window.addEventListener('load',function(){
-  if(typeof firebase!=='undefined'){
-    initFB();
-    fetchRates(false);
-    setInterval(function(){fetchRates(false);},30*60*1000);
+// Init Firebase with retry
+var fbRetries=0;
+function tryInitFB(){
+  if(typeof firebase!=='undefined'&&firebase.app){
+    try{
+      initFB();
+      fetchRates(false);
+      setInterval(function(){fetchRates(false);},30*60*1000);
+    }catch(e){
+      console.error('FB init error:',e);
+      setSyncStatus('err');
+      showLoginError('خطأ في الاتصال: '+e.message);
+      // Allow login attempt anyway
+      document.getElementById('authBtn').disabled=false;
+    }
   }else{
-    console.error('Firebase not loaded');
-    setSyncStatus('err');
+    fbRetries++;
+    if(fbRetries<20){
+      setTimeout(tryInitFB,300);
+    }else{
+      setSyncStatus('err');
+      console.error('Firebase failed to load after retries');
+      document.getElementById('authBtn').disabled=false;
+    }
   }
+}
+window.addEventListener('load',function(){
+  setTimeout(tryInitFB,100);
 });
 
 </script>
