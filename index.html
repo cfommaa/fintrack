@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FinTrack Cloud</title>
+<script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-database.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-auth.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --pr:#1a56db;--su:#0e9f6e;--da:#e02424;--wa:#f59e0b;
+  --bg:#f1f5f9;--card:#fff;--bd:rgba(0,0,0,.09);--tx:#1e293b;--mu:#64748b;
+  --sb:#1e293b;--sbt:#e2e8f0;--r:12px;
+}
+body.dark{--bg:#0f172a;--card:#1e293b;--bd:rgba(255,255,255,.08);--tx:#f1f5f9;--mu:#94a3b8;--sb:#0a0f1e;--input:#0f172a}
+body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:var(--tx);display:flex;min-height:100vh;font-size:14px}
+
+/* LOGIN */
+#loginWrap{position:fixed;inset:0;background:linear-gradient(135deg,#0f172a,#1e3a5f);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px}
+.loginBox{width:100%;max-width:380px}
+.loginLogo{text-align:center;margin-bottom:28px}
+.loginLogo .icon{font-size:48px;display:block;margin-bottom:8px}
+.loginLogo h1{font-size:26px;font-weight:700;color:#fff;margin-bottom:4px}
+.loginLogo p{font-size:13px;color:#94a3b8}
+.loginCard{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:24px;backdrop-filter:blur(10px)}
+.tabRow{display:flex;gap:6px;margin-bottom:20px}
+.tabBtn{flex:1;padding:9px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;transition:all .2s}
+.tabBtn.on{background:#1a56db;color:#fff}
+.tabBtn.off{background:rgba(255,255,255,.08);color:#94a3b8}
+.fld{margin-bottom:14px}
+.fld label{display:block;font-size:12.5px;font-weight:500;color:#cbd5e1;margin-bottom:5px}
+.fld input{width:100%;padding:10px 13px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:13.5px;outline:none;font-family:inherit;transition:border .2s}
+.fld input:focus{border-color:#60a5fa}
+.fld input::placeholder{color:#475569}
+#loginErr{color:#fca5a5;font-size:12px;text-align:center;margin-bottom:10px;display:none}
+.loginBtn{width:100%;padding:11px;background:#1a56db;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .2s}
+.loginBtn:hover{opacity:.88}
+.loginBtn:disabled{opacity:.5;cursor:default}
+
+/* SIDEBAR */
+.sidebar{width:220px;min-height:100vh;background:var(--sb);color:var(--sbt);display:flex;flex-direction:column;position:fixed;top:0;right:0;bottom:0;z-index:100}
+.sLogo{padding:18px 20px;font-size:17px;font-weight:700;color:#fff;border-bottom:1px solid rgba(255,255,255,.1)}
+.sLogo span{color:#60a5fa}
+.sNav{flex:1;overflow-y:auto;padding:6px 0}
+.sSection{font-size:10px;text-transform:uppercase;padding:14px 20px 4px;opacity:.45;letter-spacing:1px}
+.nav{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;font-size:13px;color:var(--sbt);transition:background .15s}
+.nav:hover{background:rgba(255,255,255,.08)}
+.nav.on{background:rgba(255,255,255,.1);color:#fff;border-right:3px solid #60a5fa}
+.sUser{padding:12px 16px;border-top:1px solid rgba(255,255,255,.08)}
+.userRow{display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--pr);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0}
+.userName{font-size:13px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.userEmail{font-size:10px;color:#475569;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.miniBtn{padding:5px 10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:6px;color:#94a3b8;font-size:11px;cursor:pointer;font-family:inherit}
+.langRow{padding:10px 16px;border-top:1px solid rgba(255,255,255,.08);display:flex;gap:6px}
+.lBtn{padding:5px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.15);cursor:pointer;font-size:12px;background:transparent;color:rgba(255,255,255,.6);font-family:inherit}
+.lBtn.on{background:#60a5fa;color:#fff;border-color:#60a5fa}
+
+/* MAIN */
+.main{margin-right:220px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:var(--card);border-bottom:1px solid var(--bd);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;position:sticky;top:0;z-index:50}
+.topTitle{font-size:16px;font-weight:600}
+.topRight{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.syncBadge{font-size:11px;padding:3px 10px;border-radius:20px;background:var(--bg);border:1px solid var(--bd);color:var(--mu)}
+.content{padding:20px;flex:1}
+.page{display:none}.page.on{display:block}
+
+/* CARDS */
+.card{background:var(--card);border-radius:var(--r);border:1px solid var(--bd);padding:18px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:1100px){.g4{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:768px){.sidebar{width:100%;min-height:auto;position:fixed;bottom:0;top:auto;flex-direction:row;overflow-x:auto;z-index:200}.sLogo,.sSection,.sUser,.langRow{display:none}.nav{flex-direction:column;gap:2px;padding:8px;font-size:10px;min-width:55px;justify-content:center;text-align:center;border-right:none!important;border-top:3px solid transparent}.nav.on{border-top:3px solid #60a5fa}.main{margin-right:0;margin-bottom:64px}.g2,.g3{grid-template-columns:1fr}.g4{grid-template-columns:1fr 1fr}}
+
+.kpi{background:var(--card);border-radius:var(--r);border:1px solid var(--bd);padding:16px}
+.kpi .ic{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;margin-bottom:10px}
+.kpi .lb{font-size:12px;color:var(--mu);margin-bottom:4px}
+.kpi .vl{font-size:22px;font-weight:700}
+.ic-b{background:#dbeafe;color:#1d4ed8}.ic-g{background:#d1fae5;color:#065f46}.ic-r{background:#fee2e2;color:#b91c1c}.ic-p{background:#ede9fe;color:#5b21b6}
+body.dark .ic-b{background:#1e3a5f}.dark .ic-g{background:#064e3b}.dark .ic-r{background:#450a0a}.dark .ic-p{background:#2e1065}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:8px 14px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:500;transition:all .15s;font-family:inherit}
+.btn-p{background:var(--pr);color:#fff}.btn-p:hover{opacity:.88}
+.btn-o{background:transparent;border:1px solid var(--bd);color:var(--tx)}.btn-o:hover{background:var(--bg)}
+.btn-d{background:var(--da);color:#fff}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-ic{padding:6px 9px}
+
+/* FORM */
+.fg{margin-bottom:14px}
+.fg label{display:block;font-size:13px;font-weight:500;margin-bottom:5px}
+.fc{width:100%;padding:9px 12px;border:1px solid var(--bd);border-radius:8px;background:var(--input,#f8fafc);color:var(--tx);font-size:13.5px;outline:none;transition:border .15s;font-family:inherit}
+.fc:focus{border-color:var(--pr)}
+
+/* TABLE */
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:580px}
+th{font-size:11px;text-transform:uppercase;color:var(--mu);padding:10px 12px;border-bottom:2px solid var(--bd);text-align:right;font-weight:600;white-space:nowrap}
+td{padding:11px 12px;border-bottom:1px solid var(--bd);font-size:13px}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg)}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:12px;font-weight:600}
+.bg-g{background:#d1fae5;color:#065f46}.bg-r{background:#fee2e2;color:#991b1b}
+body.dark .bg-g{background:#064e3b;color:#6ee7b7}.dark .bg-r{background:#450a0a;color:#fca5a5}
+.dep{color:var(--su);font-weight:600}.wth{color:var(--da);font-weight:600}
+
+/* TABS */
+.tabs{display:flex;gap:4px;background:var(--bg);padding:5px;border-radius:10px;margin-bottom:18px;overflow-x:auto}
+.tab{padding:7px 14px;border-radius:7px;cursor:pointer;font-size:13px;font-weight:500;color:var(--mu);white-space:nowrap;transition:all .15s}
+.tab.on{background:var(--card);color:var(--tx);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+
+/* MODAL */
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:16px}
+.ov.on{display:flex}
+.modal{background:var(--card);border-radius:16px;padding:24px;width:440px;max-width:100%;max-height:90vh;overflow-y:auto}
+.mTitle{font-size:16px;font-weight:700;margin-bottom:18px}
+.mFoot{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+
+/* MISC */
+.empty{text-align:center;padding:40px 20px;color:var(--mu)}
+.empty .ei{font-size:36px;margin-bottom:10px}
+.pbar{background:var(--bd);border-radius:99px;height:6px;overflow:hidden}
+.pfill{height:100%;border-radius:99px}
+.cdot{width:28px;height:28px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:all .15s}
+.cdot.on,.cdot:hover{border-color:var(--tx);transform:scale(1.1)}
+.crow{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.notif{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:11px 22px;border-radius:10px;font-size:13px;font-weight:500;z-index:9999;opacity:0;pointer-events:none;transition:opacity .3s;white-space:nowrap}
+.notif.on{opacity:1}
+@media(min-width:769px){.notif{bottom:24px}}
+.actItem{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--bd)}
+.actIcon{width:36px;height:36px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.infoBox{background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:14px;margin-top:4px}
+.srow{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd);font-size:13.5px}
+.srow:last-child{border-bottom:none;font-weight:700;font-size:15px}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginWrap">
+  <div class="loginBox">
+    <div class="loginLogo">
+      <span class="icon">💳</span>
+      <h1>FinTrack</h1>
+      <p id="lbl-sub">نظام متابعة الرصيد المشترك</p>
+    </div>
+    <div class="loginCard">
+      <div class="tabRow">
+        <button class="tabBtn on" onclick="setTab('in')" id="tab-in">تسجيل الدخول</button>
+        <button class="tabBtn off" onclick="setTab('up')" id="tab-up">إنشاء حساب</button>
+      </div>
+      <div class="fld" id="nameField" style="display:none">
+        <label>الاسم الكامل</label>
+        <input id="iName" type="text" placeholder="اسمك الكامل">
+      </div>
+      <div class="fld">
+        <label>البريد الإلكتروني</label>
+        <input id="iEmail" type="email" placeholder="example@email.com" style="direction:ltr" onkeydown="if(event.key==='Enter')auth()">
+      </div>
+      <div class="fld">
+        <label>كلمة المرور</label>
+        <input id="iPass" type="password" placeholder="••••••••" style="direction:ltr" onkeydown="if(event.key==='Enter')auth()">
+      </div>
+      <div id="loginErr"></div>
+      <button class="loginBtn" id="authBtn" onclick="auth()">تسجيل الدخول</button>
+    </div>
+    <div style="text-align:center;margin-top:14px;font-size:11px;color:#334155">FinTrack · نظام آمن ومشفر</div>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sLogo">💳 <span>FinTrack</span></div>
+  <div class="sNav">
+    <div class="sSection" id="s-main">الرئيسية</div>
+    <div class="nav on" onclick="go('dash')" id="nav-dash"><span>📊</span><span id="lbl-dash">لوحة التحكم</span></div>
+    <div class="nav" onclick="go('acc')" id="nav-acc"><span>🏦</span><span id="lbl-acc">الحسابات</span></div>
+    <div class="nav" onclick="go('tx')" id="nav-tx"><span>💸</span><span id="lbl-tx">العمليات</span></div>
+    <div class="nav" onclick="go('conv')" id="nav-conv"><span>🔄</span><span id="lbl-conv">تحويل العملات</span></div>
+    <div class="sSection" id="s-rep">التقارير</div>
+    <div class="nav" onclick="go('rep')" id="nav-rep"><span>📈</span><span id="lbl-rep">التقارير</span></div>
+    <div class="sSection" id="s-act">النشاط</div>
+    <div class="nav" onclick="openActivity()" id="nav-act"><span>📋</span><span id="lbl-act">سجل النشاط</span></div>
+    <div class="nav" onclick="openMyDash()" id="nav-me"><span>👤</span><span id="lbl-me">لوحتي</span></div>
+    <div class="sSection" id="s-set">الإعدادات</div>
+    <div class="nav" onclick="go('set')" id="nav-set"><span>⚙️</span><span id="lbl-set">الإعدادات</span></div>
+  </div>
+  <div class="sUser">
+    <div class="userRow" onclick="openMyDash()">
+      <div class="avatar" id="uAvatar">?</div>
+      <div style="flex:1;overflow:hidden">
+        <div class="userName" id="uName">—</div>
+        <div class="userEmail" id="uEmail">—</div>
+      </div>
+      <button onclick="event.stopPropagation();logout()" title="خروج" style="background:none;border:none;color:#475569;cursor:pointer;font-size:16px">⏻</button>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button class="miniBtn" onclick="openActivity()" id="btn-actlog">📋 النشاط</button>
+      <button class="miniBtn" onclick="openMyDash()" id="btn-me">👤 لوحتي</button>
+    </div>
+  </div>
+  <div class="langRow">
+    <button class="lBtn on" onclick="setLang('ar')" id="btn-ar">العربية</button>
+    <button class="lBtn" onclick="setLang('en')" id="btn-en">English</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="topTitle" id="pageTitle">لوحة التحكم</div>
+    <div class="topRight">
+      <span class="syncBadge" id="syncBadge">⚡ <span id="syncTxt">جاري الاتصال...</span></span>
+      <button class="btn btn-o btn-sm" onclick="setLang(S.lang==='ar'?'en':'ar')" id="btn-lang-top">EN</button>
+      <button class="btn btn-o btn-sm" onclick="toggleDark()" id="btn-dark">🌙</button>
+      <button class="btn btn-p btn-sm" onclick="openM('txModal')" id="btn-add">+ إضافة عملية</button>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="content page on" id="page-dash">
+    <div class="g4" id="kpiRow"></div>
+    <div class="g2">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <div style="font-weight:600;font-size:15px" id="lbl-accsum">ملخص الحسابات</div>
+          <button class="btn btn-o btn-sm" onclick="go('acc')" id="btn-all">عرض الكل</button>
+        </div>
+        <div id="dashAccList"></div>
+      </div>
+      <div class="card">
+        <div style="font-weight:600;font-size:15px;margin-bottom:14px" id="lbl-recenttx">آخر العمليات</div>
+        <div id="dashTxList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACCOUNTS -->
+  <div class="content page" id="page-acc">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+      <div style="font-weight:600;font-size:16px" id="lbl-acctitle">دليل الحسابات</div>
+      <button class="btn btn-p" onclick="openNewAcc()" id="btn-newacc">+ حساب جديد</button>
+    </div>
+    <div class="g3" id="accGrid"></div>
+  </div>
+
+  <!-- TRANSACTIONS -->
+  <div class="content page" id="page-tx">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+      <div style="font-weight:600;font-size:16px" id="lbl-txtitle">سجل العمليات</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <select class="fc" style="width:150px" id="fAcc" onchange="renderTx()"><option value="">الكل</option></select>
+        <select class="fc" style="width:130px" id="fType" onchange="renderTx()">
+          <option value="">جميع العمليات</option>
+          <option value="deposit" id="opt-dep">إيداع</option>
+          <option value="withdrawal" id="opt-wth">صرف</option>
+        </select>
+        <button class="btn btn-o btn-sm" onclick="exportCSV()" id="btn-exp">📥 تصدير</button>
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden"><div class="tw"><table><thead><tr>
+      <th id="th-dt">التاريخ</th><th id="th-ac">الحساب</th><th id="th-tp">النوع</th>
+      <th id="th-am">المبلغ</th><th id="th-bl">الرصيد بعد</th><th id="th-by">بواسطة</th>
+      <th id="th-nt">ملاحظة</th><th id="th-ac2">إجراء</th>
+    </tr></thead><tbody id="txBody"></tbody></table></div></div>
+  </div>
+
+  <!-- CONVERTER -->
+  <div class="content page" id="page-conv">
+    <div style="max-width:480px">
+      <div style="font-weight:600;font-size:16px;margin-bottom:18px" id="lbl-convtitle">تحويل العملات</div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="fg">
+          <label id="lbl-from">من العملة</label>
+          <select class="fc" id="cFrom" onchange="calc()"></select>
+        </div>
+        <div class="fg">
+          <label id="lbl-camount">المبلغ</label>
+          <input type="number" class="fc" id="cAmt" value="1000" oninput="calc()">
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:10px;margin-bottom:14px">
+          <div style="flex:1">
+            <label class="fg" style="display:block;font-size:13px;font-weight:500;margin-bottom:5px" id="lbl-to">إلى العملة</label>
+            <select class="fc" id="cTo" onchange="calc()"></select>
+          </div>
+          <button onclick="swapConv()" style="margin-bottom:1px;width:40px;height:40px;border-radius:50%;border:1.5px solid var(--bd);background:var(--card);color:var(--pr);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">⇅</button>
+        </div>
+        <div class="infoBox">
+          <div class="srow"><span id="lbl-rate">سعر الصرف</span><span id="cRate" style="font-weight:600">—</span></div>
+          <div class="srow"><span id="lbl-res">النتيجة</span><span id="cRes" style="font-size:22px;color:var(--pr);font-weight:700">—</span></div>
+        </div>
+      </div>
+      <div style="font-weight:600;font-size:14px;margin-bottom:10px" id="lbl-ratesTitle">أسعار الصرف (من SAR)</div>
+      <div class="card"><div id="ratesGrid"></div></div>
+    </div>
+  </div>
+
+  <!-- REPORTS -->
+  <div class="content page" id="page-rep">
+    <div style="font-weight:600;font-size:16px;margin-bottom:18px" id="lbl-reptitle">التقارير</div>
+    <div class="tabs">
+      <div class="tab on" onclick="repTab('sum')" id="rt-sum">ملخص الأرصدة</div>
+      <div class="tab" onclick="repTab('hist')" id="rt-hist">تاريخ العمليات</div>
+      <div class="tab" onclick="repTab('cur')" id="rt-cur">حسب العملة</div>
+    </div>
+    <div id="repContent"></div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="content page" id="page-set">
+    <div style="font-weight:600;font-size:16px;margin-bottom:18px" id="lbl-settitle">الإعدادات</div>
+    <div style="max-width:500px;display:flex;flex-direction:column;gap:16px">
+      <div class="card">
+        <div style="font-weight:600;margin-bottom:14px" id="lbl-appear">المظهر</div>
+        <div class="fg">
+          <label id="lbl-mode">الوضع</label>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-o" id="modeL" onclick="setMode('light')" style="flex:1">☀️ <span id="lbl-light">فاتح</span></button>
+            <button class="btn btn-o" id="modeD" onclick="setMode('dark')" style="flex:1">🌙 <span id="lbl-dark">داكن</span></button>
+          </div>
+        </div>
+        <label class="fg" style="display:block;font-size:13px;font-weight:500;margin-bottom:5px" id="lbl-color">لون الثيم</label>
+        <div class="crow" id="themeColors">
+          <div class="cdot on" style="background:#1a56db" onclick="setPrimary('#1a56db','#1e293b')"></div>
+          <div class="cdot" style="background:#7c3aed" onclick="setPrimary('#7c3aed','#2e1065')"></div>
+          <div class="cdot" style="background:#059669" onclick="setPrimary('#059669','#064e3b')"></div>
+          <div class="cdot" style="background:#e11d48" onclick="setPrimary('#e11d48','#4c0519')"></div>
+          <div class="cdot" style="background:#f59e0b" onclick="setPrimary('#f59e0b','#451a03')"></div>
+          <div class="cdot" style="background:#0891b2" onclick="setPrimary('#0891b2','#0c4a6e')"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div style="font-weight:600;margin-bottom:14px" id="lbl-rset">أسعار الصرف</div>
+        <div class="g2" style="gap:10px">
+          <div class="fg" style="margin:0"><label>USD/SAR</label><input type="number" class="fc" id="r-usd" step="0.01" oninput="saveRates()"></div>
+          <div class="fg" style="margin:0"><label>EUR/SAR</label><input type="number" class="fc" id="r-eur" step="0.01" oninput="saveRates()"></div>
+          <div class="fg" style="margin:0"><label>GBP/SAR</label><input type="number" class="fc" id="r-gbp" step="0.01" oninput="saveRates()"></div>
+          <div class="fg" style="margin:0"><label>CAD/SAR</label><input type="number" class="fc" id="r-cad" step="0.01" oninput="saveRates()"></div>
+          <div class="fg" style="margin:0"><label>AED/SAR</label><input type="number" class="fc" id="r-aed" step="0.01" oninput="saveRates()"></div>
+          <div class="fg" style="margin:0"><label>EGP/SAR</label><input type="number" class="fc" id="r-egp" step="0.001" oninput="saveRates()"></div>
+          <div class="fg" style="margin:0"><label>KWD/SAR</label><input type="number" class="fc" id="r-kwd" step="0.01" oninput="saveRates()"></div>
+          <div class="fg" style="margin:0"><label>BHD/SAR</label><input type="number" class="fc" id="r-bhd" step="0.01" oninput="saveRates()"></div>
+          <div class="fg" style="margin:0"><label>QAR/SAR</label><input type="number" class="fc" id="r-qar" step="0.01" oninput="saveRates()"></div>
+          <div class="fg" style="margin:0"><label>OMR/SAR</label><input type="number" class="fc" id="r-omr" step="0.01" oninput="saveRates()"></div>
+          <div class="fg" style="margin:0"><label>JOD/SAR</label><input type="number" class="fc" id="r-jod" step="0.01" oninput="saveRates()"></div>
+        </div>
+        <button class="btn btn-p" onclick="fetchRates(true)" style="margin-top:12px">🌐 <span id="lbl-fetchr">جلب أسعار مباشرة</span></button>
+      </div>
+      <div class="card">
+        <div style="font-weight:600;margin-bottom:10px;color:var(--da)" id="lbl-danger">منطقة الخطر</div>
+        <button class="btn btn-d" onclick="clearAll()" id="btn-clear">🗑️ حذف جميع البيانات</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<!-- Add Account -->
+<div class="ov" id="accModal">
+  <div class="modal">
+    <div class="mTitle" id="accModalTitle">إضافة حساب جديد</div>
+    <div class="fg"><label id="lbl-aname">اسم الحساب</label><input type="text" class="fc" id="aName" placeholder="مثال: الحساب الجاري"></div>
+    <div class="fg"><label id="lbl-aowner">صاحب الحساب</label><input type="text" class="fc" id="aOwner"></div>
+    <div class="fg">
+      <label id="lbl-acur">العملات (اختر واحدة أو أكثر)</label>
+      <div id="curChecks" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px"></div>
+    </div>
+    <div class="fg"><label id="lbl-abal">الرصيد الابتدائي</label><input type="number" class="fc" id="aBal" value="0"></div>
+    <div class="fg">
+      <label id="lbl-acolor">لون الحساب</label>
+      <div class="crow" id="accColorPick">
+        <div class="cdot on" style="background:#1a56db" data-c="#1a56db"></div>
+        <div class="cdot" style="background:#7c3aed" data-c="#7c3aed"></div>
+        <div class="cdot" style="background:#059669" data-c="#059669"></div>
+        <div class="cdot" style="background:#e11d48" data-c="#e11d48"></div>
+        <div class="cdot" style="background:#f59e0b" data-c="#f59e0b"></div>
+        <div class="cdot" style="background:#0891b2" data-c="#0891b2"></div>
+        <div class="cdot" style="background:#8b5cf6" data-c="#8b5cf6"></div>
+        <div class="cdot" style="background:#ec4899" data-c="#ec4899"></div>
+      </div>
+    </div>
+    <div class="mFoot">
+      <button class="btn btn-o" onclick="closeM('accModal')" id="btn-canacc">إلغاء</button>
+      <button class="btn btn-p" onclick="saveAcc()" id="btn-saveacc">حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Transaction -->
+<div class="ov" id="txModal">
+  <div class="modal">
+    <div class="mTitle" id="txModalTitle">إضافة عملية جديدة</div>
+    <div class="fg"><label id="lbl-txacc">الحساب</label><select class="fc" id="txAcc" onchange="updateTxCurs()"></select></div>
+    <div class="fg">
+      <label id="lbl-txtype">نوع العملية</label>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-p" id="depBtn" onclick="setTxT('deposit')" style="flex:1">⬆️ <span id="lbl-dep">إيداع</span></button>
+        <button class="btn btn-o" id="wthBtn" onclick="setTxT('withdrawal')" style="flex:1">⬇️ <span id="lbl-wth">صرف</span></button>
+      </div>
+    </div>
+    <div class="fg"><label id="lbl-txcur">العملة</label><select class="fc" id="txCur" onchange="previewBal()"></select></div>
+    <div class="fg"><label id="lbl-txamt">المبلغ</label><input type="number" class="fc" id="txAmt" placeholder="0.00" oninput="previewBal()"></div>
+    <div class="fg"><label id="lbl-txdate">التاريخ</label><input type="date" class="fc" id="txDate"></div>
+    <div class="fg"><label id="lbl-txnote">ملاحظة</label><input type="text" class="fc" id="txNote" placeholder="اختياري"></div>
+    <div id="balPreview" style="display:none" class="infoBox">
+      <div style="font-size:12px;color:var(--mu);margin-bottom:8px" id="lbl-prev">الرصيد بعد العملية:</div>
+      <div id="balLines"></div>
+    </div>
+    <div class="mFoot">
+      <button class="btn btn-o" onclick="closeM('txModal')" id="btn-cantx">إلغاء</button>
+      <button class="btn btn-p" onclick="saveTx()" id="btn-savetx">تنفيذ</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Transaction -->
+<div class="ov" id="editTxModal">
+  <div class="modal">
+    <div class="mTitle" id="lbl-edittx">تعديل العملية</div>
+    <input type="hidden" id="editTxId">
+    <div class="fg"><label id="lbl-editamt">المبلغ</label><input type="number" class="fc" id="editAmt"></div>
+    <div class="fg"><label id="lbl-editnote">الملاحظة</label><input type="text" class="fc" id="editNote"></div>
+    <div class="mFoot">
+      <button class="btn btn-o" onclick="closeM('editTxModal')" id="btn-canedit">إلغاء</button>
+      <button class="btn btn-p" onclick="doEditTx()" id="btn-saveedit">حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- Activity Log -->
+<div class="ov" id="actModal">
+  <div class="modal" style="max-width:600px;max-height:80vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <div class="mTitle" style="margin:0" id="lbl-actlog">سجل نشاط المستخدمين</div>
+      <button class="btn btn-o btn-sm" onclick="closeM('actModal')">✕</button>
+    </div>
+    <div id="actList"></div>
+  </div>
+</div>
+
+<!-- My Dashboard -->
+<div class="ov" id="myDashModal">
+  <div class="modal" style="max-width:540px;max-height:85vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <div class="mTitle" style="margin:0" id="lbl-mydash">لوحتي الشخصية</div>
+      <button class="btn btn-o btn-sm" onclick="closeM('myDashModal')">✕</button>
+    </div>
+    <div id="myDashContent"></div>
+  </div>
+</div>
+
+<div class="notif" id="notif"></div>
+
+<script>
+
+// ── FIREBASE CONFIG ──────────────────────────────
+var fbCfg = {
+  apiKey: "AIzaSyDAbWoJoIobem3j2uHUQd6tsqscXOIk-uc",
+  authDomain: "fintrack-c43ad.firebaseapp.com",
+  databaseURL: "https://fintrack-c43ad-default-rtdb.firebaseio.com",
+  projectId: "fintrack-c43ad",
+  storageBucket: "fintrack-c43ad.firebasestorage.app",
+  messagingSenderId: "837454584758",
+  appId: "1:837454584758:web:28496b5acf5277c7503f17"
+};
+
+// ── CONSTANTS ────────────────────────────────────
+var CURS = ['SAR','USD','EUR','GBP','CAD','AED','EGP','KWD','BHD','QAR','OMR','JOD'];
+var SYM  = {SAR:'ر.س',USD:'$',EUR:'€',GBP:'£',CAD:'CA$',AED:'د.إ',EGP:'ج.م',KWD:'د.ك',BHD:'د.ب',QAR:'ر.ق',OMR:'ر.ع',JOD:'د.أ'};
+
+// ── STATE ────────────────────────────────────────
+var S = {
+  lang:'ar', dark:false, primaryColor:'#1a56db', sidebarColor:'#1e293b',
+  accounts:[], transactions:[],
+  rates:{SAR:1,USD:3.75,EUR:4.05,GBP:4.75,CAD:2.75,AED:1.02,EGP:0.076,KWD:12.20,BHD:9.95,QAR:1.03,OMR:9.74,JOD:5.29}
+};
+var CU = null; // current user {uid,name,email,initials}
+var db = null, dbRef = null, actRef = null, syncing = false;
+var loginMode = 'in';
+var editingAccId = null;
+var txType = 'deposit';
+var selAccColor = '#1a56db';
+var curRepTab = 'sum';
+
+// ── LOCAL STORAGE ────────────────────────────────
+function loadLocal(){try{var d=localStorage.getItem('ft3');if(d)Object.assign(S,JSON.parse(d));}catch(e){}}
+function saveLocal(){try{localStorage.setItem('ft3',JSON.stringify(S));}catch(e){}}
+
+// ── FORMAT ───────────────────────────────────────
+function fmt(n){return Number(n).toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fmtC(n,c){return (SYM[c]||c)+' '+fmt(n);}
+function toSAR(a,c){return a*(S.rates[c]||1);}
+function frSAR(a,c){return a/(S.rates[c]||1);}
+
+// ── NOTIFY ───────────────────────────────────────
+var ntTimer;
+function notify(msg){
+  var el=document.getElementById('notif');
+  el.textContent=msg;el.classList.add('on');
+  clearTimeout(ntTimer);ntTimer=setTimeout(function(){el.classList.remove('on');},2800);
+}
+
+// ── SYNC STATUS ──────────────────────────────────
+function setSyncStatus(s){
+  var el=document.getElementById('syncBadge'),tx=document.getElementById('syncTxt');
+  if(!el||!tx)return;
+  var m={
+    ok:{t:{ar:'متصل 🟢',en:'Connected 🟢'},bg:'#d1fae5',c:'#065f46'},
+    sync:{t:{ar:'مزامنة...',en:'Syncing...'},bg:'#fef3c7',c:'#92400e'},
+    off:{t:{ar:'غير متصل',en:'Offline'},bg:'var(--bg)',c:'var(--mu)'},
+    err:{t:{ar:'خطأ',en:'Error'},bg:'#fee2e2',c:'#991b1b'}
+  };
+  var x=m[s]||m.off;
+  el.style.background=x.bg;el.style.color=x.c;
+  tx.textContent=x.t[S.lang]||x.t.ar;
+}
+
+// ── LOGIN ────────────────────────────────────────
+function setTab(t){
+  loginMode=t;
+  var isIn=t==='in';
+  document.getElementById('tab-in').className='tabBtn '+(isIn?'on':'off');
+  document.getElementById('tab-up').className='tabBtn '+(isIn?'off':'on');
+  document.getElementById('nameField').style.display=isIn?'none':'block';
+  document.getElementById('authBtn').textContent=isIn?'تسجيل الدخول':'إنشاء الحساب';
+  document.getElementById('loginErr').style.cssText='display:none';
+}
+
+function showErr(msg){
+  var el=document.getElementById('loginErr');
+  el.textContent=msg;el.style.cssText='color:#fca5a5;font-size:12px;text-align:center;margin-bottom:10px;display:block';
+}
+
+function auth(){
+  var email=document.getElementById('iEmail').value.trim();
+  var pass=document.getElementById('iPass').value;
+  var name=document.getElementById('iName').value.trim();
+  var btn=document.getElementById('authBtn');
+  if(!email||!pass){showErr('أدخل البريد وكلمة المرور');return;}
+  btn.disabled=true;btn.textContent='جاري...';
+  document.getElementById('loginErr').style.display='none';
+  var p = loginMode==='up'
+    ? firebase.auth().createUserWithEmailAndPassword(email,pass).then(function(c){
+        return c.user.updateProfile({displayName:name||email.split('@')[0]}).then(function(){
+          return db.ref('users/'+c.user.uid).set({name:name||email.split('@')[0],email:email,createdAt:Date.now()});
+        });
+      })
+    : firebase.auth().signInWithEmailAndPassword(email,pass);
+  p.catch(function(e){
+    var errs={'auth/user-not-found':'البريد غير مسجل','auth/wrong-password':'كلمة المرور خاطئة',
+      'auth/email-already-in-use':'البريد مسجل مسبقاً','auth/weak-password':'كلمة المرور ضعيفة (6 أحرف على الأقل)',
+      'auth/invalid-email':'البريد غير صحيح','auth/invalid-credential':'البريد أو كلمة المرور خاطئة'};
+    showErr(errs[e.code]||e.message);
+    btn.disabled=false;btn.textContent=loginMode==='in'?'تسجيل الدخول':'إنشاء الحساب';
+  });
+}
+
+function onLogin(user){
+  CU={uid:user.uid,name:user.displayName||user.email.split('@')[0],email:user.email,
+      initials:(user.displayName||user.email).substring(0,2).toUpperCase()};
+  document.getElementById('uAvatar').textContent=CU.initials;
+  document.getElementById('uName').textContent=CU.name;
+  document.getElementById('uEmail').textContent=CU.email;
+  document.getElementById('loginWrap').style.display='none';
+  db.ref('users/'+user.uid+'/lastSeen').set(Date.now());
+  logAct('login','تسجيل دخول','✅');
+  notify('مرحباً '+CU.name+' 👋');
+}
+
+function onLogout(){
+  CU=null;
+  document.getElementById('loginWrap').style.display='flex';
+  document.getElementById('uAvatar').textContent='?';
+  document.getElementById('uName').textContent='—';
+  document.getElementById('uEmail').textContent='—';
+}
+
+function logout(){
+  if(!confirm('تسجيل الخروج؟'))return;
+  logAct('logout','تسجيل خروج','🚪');
+  firebase.auth().signOut();
+}
+
+// ── ACTIVITY ─────────────────────────────────────
+function logAct(type,desc,icon){
+  if(!actRef||!CU)return;
+  actRef.push({uid:CU.uid,name:CU.name,type:type,desc:desc,icon:icon||'📝',time:Date.now()});
+}
+
+function timeAgo(ts){
+  var d=Date.now()-ts,m=Math.floor(d/60000);
+  if(m<1)return'الآن';if(m<60)return m+'د';
+  var h=Math.floor(m/60);if(h<24)return h+'س';
+  return Math.floor(h/24)+'يوم';
+}
+
+function openActivity(){
+  var list=document.getElementById('actList');
+  list.innerHTML='<div class="empty"><div class="ei">⏳</div>جاري التحميل...</div>';
+  openM('actModal');
+  actRef.orderByChild('time').limitToLast(100).once('value',function(snap){
+    var acts=[];
+    snap.forEach(function(c){acts.unshift(c.val());});
+    if(!acts.length){list.innerHTML='<div class="empty"><div class="ei">📋</div>لا يوجد نشاط</div>';return;}
+    list.innerHTML=acts.map(function(a){
+      return '<div class="actItem"><div class="actIcon">'+(a.icon||'📝')+'</div>'+
+        '<div style="flex:1"><div style="font-size:13.5px;font-weight:500">'+a.desc+'</div>'+
+        '<div style="font-size:12px;color:var(--mu);margin-top:2px">👤 '+(a.name||'—')+'</div></div>'+
+        '<div style="font-size:11px;color:var(--mu);white-space:nowrap">'+timeAgo(a.time)+'</div></div>';
+    }).join('');
+  });
+}
+
+// ── MY DASHBOARD ─────────────────────────────────
+function openMyDash(){
+  if(!CU)return;
+  var myTxs=S.transactions.filter(function(t){return t.createdBy===CU.uid;});
+  var deps=myTxs.filter(function(t){return t.type==='deposit';}).reduce(function(s,t){return s+t.sarAmount;},0);
+  var wths=myTxs.filter(function(t){return t.type==='withdrawal';}).reduce(function(s,t){return s+t.sarAmount;},0);
+  var myAccs=S.accounts.filter(function(a){return a.createdBy===CU.uid;});
+  var c=document.getElementById('myDashContent');
+  c.innerHTML=
+    '<div style="display:flex;align-items:center;gap:14px;padding:16px;background:linear-gradient(135deg,var(--pr),#3b82f6);border-radius:12px;color:#fff;margin-bottom:18px">'+
+      '<div style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700">'+CU.initials+'</div>'+
+      '<div><div style="font-size:18px;font-weight:700">'+CU.name+'</div><div style="font-size:12px;opacity:.85">'+CU.email+'</div></div>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px">'+
+      '<div style="background:var(--bg);border-radius:10px;padding:14px;text-align:center"><div style="font-size:11px;color:var(--mu);margin-bottom:4px">عملياتي</div><div style="font-size:22px;font-weight:700;color:var(--pr)">'+myTxs.length+'</div></div>'+
+      '<div style="background:var(--bg);border-radius:10px;padding:14px;text-align:center"><div style="font-size:11px;color:var(--mu);margin-bottom:4px">حساباتي</div><div style="font-size:22px;font-weight:700;color:var(--pr)">'+myAccs.length+'</div></div>'+
+      '<div style="background:#d1fae522;border-radius:10px;padding:14px"><div style="font-size:11px;color:var(--mu);margin-bottom:4px">إيداعاتي</div><div style="font-size:16px;font-weight:700;color:var(--su)">+'+fmtC(deps,'SAR')+'</div></div>'+
+      '<div style="background:#fee2e222;border-radius:10px;padding:14px"><div style="font-size:11px;color:var(--mu);margin-bottom:4px">صرفي</div><div style="font-size:16px;font-weight:700;color:var(--da)">-'+fmtC(wths,'SAR')+'</div></div>'+
+    '</div>'+
+    '<div style="font-weight:600;margin-bottom:10px">آخر عملياتي</div>'+
+    (myTxs.length===0?'<div class="empty"><div class="ei">💸</div>لا توجد عمليات</div>':
+      myTxs.slice(0,8).map(function(tx){
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--bd)">'+
+          '<div><div style="font-size:13px;font-weight:500">'+tx.accountName+'</div>'+
+          '<div style="font-size:11px;color:var(--mu)">'+tx.date+(tx.note?' · '+tx.note:'')+'</div></div>'+
+          '<div style="font-weight:600;color:'+(tx.type==='deposit'?'var(--su)':'var(--da)')+'">'+
+            (tx.type==='deposit'?'+':'-')+fmtC(tx.amount,tx.currency)+'</div></div>';
+      }).join(''));
+  openM('myDashModal');
+}
+
+// ── FIREBASE INIT ────────────────────────────────
+function initFB(){
+  try{
+    firebase.initializeApp(fbCfg);
+    db=firebase.database();
+    actRef=db.ref('fintrack/activity');
+    dbRef=db.ref('fintrack/data');
+    setSyncStatus('sync');
+
+    firebase.auth().onAuthStateChanged(function(user){
+      if(user)onLogin(user);else onLogout();
+    });
+
+    dbRef.on('value',function(snap){
+      if(syncing)return;
+      var r=snap.val();
+      if(r){
+        var keep={lang:S.lang,dark:S.dark,primaryColor:S.primaryColor,sidebarColor:S.sidebarColor};
+        if(r.accounts)S.accounts=r.accounts;
+        if(r.transactions)S.transactions=r.transactions;
+        if(r.rates)S.rates=r.rates;
+        Object.assign(S,keep);
+        saveLocal();refreshAll();fillRateInputs();
+      }
+      setSyncStatus('ok');
+    },function(){setSyncStatus('err');});
+
+  }catch(e){setSyncStatus('err');console.error('FB:',e);}
+}
+
+function pushFB(){
+  if(!dbRef)return;
+  syncing=true;setSyncStatus('sync');
+  dbRef.set({accounts:S.accounts,transactions:S.transactions,rates:S.rates})
+    .then(function(){setSyncStatus('ok');})
+    .catch(function(){setSyncStatus('err');})
+    .finally(function(){syncing=false;});
+}
+
+// ── MODAL ────────────────────────────────────────
+function openM(id){document.getElementById(id).classList.add('on');}
+function closeM(id){document.getElementById(id).classList.remove('on');editingAccId=null;}
+
+// ── ACCOUNTS ─────────────────────────────────────
+function buildCurChecks(){
+  document.getElementById('curChecks').innerHTML=CURS.map(function(c){
+    return '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12.5px;padding:6px 8px;border:1px solid var(--bd);border-radius:7px">'+
+      '<input type="checkbox" value="'+c+'" style="cursor:pointer;accent-color:var(--pr)"> '+c+' '+(SYM[c]||'')+'</label>';
+  }).join('');
+}
+
+function initAccColors(){
+  selAccColor='#1a56db';
+  document.querySelectorAll('#accColorPick .cdot').forEach(function(d){
+    d.classList.toggle('on',d.dataset.c==='#1a56db');
+    d.onclick=function(){
+      document.querySelectorAll('#accColorPick .cdot').forEach(function(x){x.classList.remove('on');});
+      d.classList.add('on');selAccColor=d.dataset.c;
+    };
+  });
+}
+
+function openNewAcc(){
+  editingAccId=null;
+  document.getElementById('accModalTitle').textContent=S.lang==='ar'?'إضافة حساب جديد':'Add New Account';
+  document.getElementById('aName').value='';document.getElementById('aOwner').value='';document.getElementById('aBal').value='0';
+  buildCurChecks();initAccColors();openM('accModal');
+}
+
+function openEditAcc(id){
+  var a=S.accounts.find(function(x){return x.id===id;});if(!a)return;
+  editingAccId=id;
+  document.getElementById('accModalTitle').textContent=S.lang==='ar'?'تعديل الحساب':'Edit Account';
+  document.getElementById('aName').value=a.name;document.getElementById('aOwner').value=a.owner||'';document.getElementById('aBal').value=a.balance;
+  buildCurChecks();
+  document.querySelectorAll('#curChecks input').forEach(function(inp){if(a.currencies.includes(inp.value))inp.checked=true;});
+  initAccColors();
+  var dot=document.querySelector('#accColorPick .cdot[data-c="'+a.color+'"]');
+  if(dot){document.querySelectorAll('#accColorPick .cdot').forEach(function(x){x.classList.remove('on');});dot.classList.add('on');selAccColor=a.color;}
+  openM('accModal');
+}
+
+function saveAcc(){
+  var name=document.getElementById('aName').value.trim();
+  var owner=document.getElementById('aOwner').value.trim();
+  var curs=[].slice.call(document.querySelectorAll('#curChecks input:checked')).map(function(i){return i.value;});
+  var bal=parseFloat(document.getElementById('aBal').value)||0;
+  if(!name){notify(S.lang==='ar'?'أدخل اسم الحساب':'Enter account name');return;}
+  if(!curs.length){notify(S.lang==='ar'?'اختر عملة واحدة على الأقل':'Choose at least one currency');return;}
+  if(editingAccId){
+    var a=S.accounts.find(function(x){return x.id===editingAccId;});
+    if(a){a.name=name;a.owner=owner;a.currencies=curs;a.color=selAccColor;}
+    logAct('editAcc','تعديل حساب: '+name,'✏️');
+    notify(S.lang==='ar'?'تم التعديل':'Updated');
+  }else{
+    S.accounts.push({id:Date.now()+'',name:name,owner:owner,currencies:curs,balance:bal,
+      sarBalance:toSAR(bal,curs[0]),color:selAccColor,mainCurrency:curs[0],
+      createdBy:CU?CU.uid:'',createdByName:CU?CU.name:''});
+    logAct('newAcc','إضافة حساب: '+name,'🏦');
+    notify(S.lang==='ar'?'تم إنشاء الحساب':'Account created');
+  }
+  saveLocal();pushFB();closeM('accModal');refreshAll();
+}
+
+function delAcc(id){
+  if(!confirm(S.lang==='ar'?'حذف هذا الحساب؟':'Delete this account?'))return;
+  var a=S.accounts.find(function(x){return x.id===id;});
+  S.accounts=S.accounts.filter(function(x){return x.id!==id;});
+  S.transactions=S.transactions.filter(function(x){return x.accountId!==id;});
+  if(a)logAct('delAcc','حذف حساب: '+a.name,'🗑️');
+  saveLocal();pushFB();notify(S.lang==='ar'?'تم الحذف':'Deleted');refreshAll();
+}
+
+function renderAccounts(){
+  var g=document.getElementById('accGrid');
+  if(!S.accounts.length){g.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="ei">🏦</div>لا توجد حسابات</div>';return;}
+  g.innerHTML=S.accounts.map(function(a){
+    var txs=S.transactions.filter(function(t){return t.accountId===a.id;});
+    var deps=txs.filter(function(t){return t.type==='deposit';}).reduce(function(s,t){return s+t.amount;},0);
+    var wths=txs.filter(function(t){return t.type==='withdrawal';}).reduce(function(s,t){return s+t.amount;},0);
+    var badges=a.currencies.map(function(c){return '<span style="background:'+a.color+'22;color:'+a.color+';padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600">'+c+'</span>';}).join(' ');
+    var allBals=a.currencies.map(function(c){return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span style="color:var(--mu)">'+c+':</span><span style="font-weight:600">'+fmtC(frSAR(a.sarBalance,c),c)+'</span></div>';}).join('');
+    return '<div style="border:1.5px solid var(--bd);border-radius:var(--r);padding:16px;background:var(--card);transition:all .15s" onmouseover="this.style.borderColor=\''+a.color+'\'" onmouseout="this.style.borderColor=\'var(--bd)\'">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">'+
+        '<div><div style="width:34px;height:34px;border-radius:9px;background:'+a.color+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:700;margin-bottom:7px">'+a.name[0]+'</div>'+
+          '<div style="font-weight:600;font-size:14px">'+a.name+'</div>'+(a.owner?'<div style="font-size:11px;color:var(--mu)">'+a.owner+'</div>':'')+
+          (a.createdByName?'<div style="font-size:10px;color:var(--mu);margin-top:2px">أنشأه: '+a.createdByName+'</div>':'')+
+        '</div>'+
+        '<div style="display:flex;gap:5px">'+
+          '<button class="btn btn-o btn-ic btn-sm" onclick="openEditAcc(\''+a.id+'\')">✏️</button>'+
+          '<button class="btn btn-o btn-ic btn-sm" onclick="delAcc(\''+a.id+'\')">🗑️</button>'+
+        '</div>'+
+      '</div>'+
+      '<div style="margin-bottom:8px">'+badges+'</div>'+
+      '<div style="font-size:20px;font-weight:700;color:'+a.color+';margin-bottom:3px">'+fmtC(a.balance,a.mainCurrency)+'</div>'+
+      '<div style="border-top:1px solid var(--bd);margin:8px 0;padding-top:8px">'+allBals+'</div>'+
+      '<div style="display:flex;gap:10px;font-size:12px"><span class="dep">⬆ '+fmtC(deps,a.mainCurrency)+'</span><span class="wth">⬇ '+fmtC(wths,a.mainCurrency)+'</span></div>'+
+    '</div>';
+  }).join('');
+}
+
+// ── TRANSACTIONS ─────────────────────────────────
+function initTxModal(){
+  var sel=document.getElementById('txAcc');
+  sel.innerHTML=S.accounts.length?S.accounts.map(function(a){return '<option value="'+a.id+'">'+a.name+'</option>';}).join(''):'<option value="">لا توجد حسابات</option>';
+  document.getElementById('txDate').value=new Date().toISOString().split('T')[0];
+  document.getElementById('txAmt').value='';document.getElementById('txNote').value='';
+  setTxT('deposit');updateTxCurs();document.getElementById('balPreview').style.display='none';
+}
+
+function setTxT(t){
+  txType=t;
+  document.getElementById('depBtn').className='btn '+(t==='deposit'?'btn-p':'btn-o');
+  document.getElementById('wthBtn').className='btn '+(t==='withdrawal'?'btn-p':'btn-o');
+  document.getElementById('depBtn').style.flex='1';document.getElementById('wthBtn').style.flex='1';
+  previewBal();
+}
+
+function updateTxCurs(){
+  var id=document.getElementById('txAcc').value;
+  var a=S.accounts.find(function(x){return x.id===id;});
+  var sel=document.getElementById('txCur');
+  sel.innerHTML=a?a.currencies.map(function(c){return '<option value="'+c+'">'+c+' '+(SYM[c]||'')+'</option>';}).join(''):'<option>SAR</option>';
+  previewBal();
+}
+
+function previewBal(){
+  var id=document.getElementById('txAcc').value;
+  var a=S.accounts.find(function(x){return x.id===id;});
+  var amt=parseFloat(document.getElementById('txAmt').value)||0;
+  var cur=document.getElementById('txCur').value;
+  if(!a||!amt){document.getElementById('balPreview').style.display='none';return;}
+  var sarAmt=toSAR(amt,cur);
+  var newSAR=a.sarBalance+(txType==='deposit'?sarAmt:-sarAmt);
+  document.getElementById('balLines').innerHTML=a.currencies.map(function(c){
+    var nb=frSAR(newSAR,c);
+    return '<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:13px"><span>'+c+':</span>'+
+      '<span style="font-weight:600;color:'+(nb>=0?'var(--su)':'var(--da)')+'">'+fmtC(nb,c)+'</span></div>';
+  }).join('');
+  document.getElementById('balPreview').style.display='block';
+}
+
+function saveTx(){
+  var id=document.getElementById('txAcc').value;
+  var a=S.accounts.find(function(x){return x.id===id;});
+  if(!a){notify(S.lang==='ar'?'اختر حساباً':'Select an account');return;}
+  var amt=parseFloat(document.getElementById('txAmt').value);
+  if(!amt||amt<=0){notify(S.lang==='ar'?'أدخل مبلغاً صحيحاً':'Enter valid amount');return;}
+  var cur=document.getElementById('txCur').value;
+  var sarAmt=toSAR(amt,cur);
+  if(txType==='withdrawal'&&a.sarBalance<sarAmt){notify(S.lang==='ar'?'الرصيد غير كافٍ':'Insufficient balance');return;}
+  a.sarBalance+=txType==='deposit'?sarAmt:-sarAmt;
+  a.balance=frSAR(a.sarBalance,a.mainCurrency);
+  var tx={id:Date.now()+'',accountId:id,accountName:a.name,type:txType,amount:amt,currency:cur,sarAmount:sarAmt,
+    date:document.getElementById('txDate').value,note:document.getElementById('txNote').value,
+    balanceAfter:a.balance,sarBalanceAfter:a.sarBalance,
+    createdBy:CU?CU.uid:'',createdByName:CU?CU.name:'',createdAt:Date.now()};
+  S.transactions.unshift(tx);
+  logAct(txType,(txType==='deposit'?'إيداع ':'صرف ')+fmtC(amt,cur)+' ← '+a.name,txType==='deposit'?'⬆️':'⬇️');
+  saveLocal();pushFB();closeM('txModal');
+  notify(txType==='deposit'?'✅ تم الإيداع':'✅ تم الصرف');
+  refreshAll();
+}
+
+function renderTx(){
+  var fAcc=document.getElementById('fAcc').value;
+  var fType=document.getElementById('fType').value;
+  var txs=S.transactions.filter(function(t){
+    return (!fAcc||t.accountId===fAcc)&&(!fType||t.type===fType);
+  });
+  var tbody=document.getElementById('txBody');
+  if(!txs.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--mu);padding:32px">لا توجد عمليات</td></tr>';return;}
+  tbody.innerHTML=txs.map(function(tx){
+    var a=S.accounts.find(function(x){return x.id===tx.accountId;});
+    var bals=a?a.currencies.map(function(c){return fmtC(frSAR(tx.sarBalanceAfter,c),c);}).join(' | '):'—';
+    var isD=tx.type==='deposit';
+    return '<tr>'+
+      '<td style="white-space:nowrap">'+tx.date+'</td>'+
+      '<td><div style="display:flex;align-items:center;gap:6px">'+(a?'<div style="width:8px;height:8px;border-radius:50%;background:'+a.color+';flex-shrink:0"></div>':'')+
+        '<span style="font-weight:500">'+tx.accountName+'</span></div></td>'+
+      '<td><span class="badge '+(isD?'bg-g':'bg-r')+'">'+(isD?(S.lang==='ar'?'إيداع':'Dep'):(S.lang==='ar'?'صرف':'Wth'))+'</span></td>'+
+      '<td class="'+(isD?'dep':'wth')+'" style="white-space:nowrap">'+(isD?'+':'-')+fmtC(tx.amount,tx.currency)+'</td>'+
+      '<td style="font-size:11px;color:var(--mu)">'+bals+'</td>'+
+      '<td style="font-size:12px;color:var(--mu)">'+(tx.createdByName?'👤 '+tx.createdByName:'—')+'</td>'+
+      '<td style="color:var(--mu)">'+(tx.note||'—')+'</td>'+
+      '<td><div style="display:flex;gap:4px">'+
+        '<button class="btn btn-o btn-ic btn-sm" onclick="openEditTx(\''+tx.id+'\')">✏️</button>'+
+        '<button class="btn btn-o btn-ic btn-sm" onclick="delTx(\''+tx.id+'\')">🗑️</button>'+
+      '</div></td></tr>';
+  }).join('');
+}
+
+function updateFAccSel(){
+  var sel=document.getElementById('fAcc'),v=sel.value;
+  sel.innerHTML='<option value="">'+(S.lang==='ar'?'جميع الحسابات':'All Accounts')+'</option>'+
+    S.accounts.map(function(a){return '<option value="'+a.id+'"'+(v===a.id?' selected':'')+'>'+a.name+'</option>';}).join('');
+}
+
+function openEditTx(id){
+  var tx=S.transactions.find(function(t){return t.id===id;});if(!tx)return;
+  document.getElementById('editTxId').value=id;
+  document.getElementById('editAmt').value=tx.amount;
+  document.getElementById('editNote').value=tx.note||'';
+  openM('editTxModal');
+}
+
+function doEditTx(){
+  var id=document.getElementById('editTxId').value;
+  var tx=S.transactions.find(function(t){return t.id===id;});if(!tx)return;
+  var newAmt=parseFloat(document.getElementById('editAmt').value)||tx.amount;
+  var diff=newAmt-tx.amount;
+  var a=S.accounts.find(function(x){return x.id===tx.accountId;});
+  if(a){
+    var sd=toSAR(diff,tx.currency)*(tx.type==='deposit'?1:-1);
+    a.sarBalance+=sd;a.balance=frSAR(a.sarBalance,a.mainCurrency);
+    tx.sarBalanceAfter+=sd;
+  }
+  tx.amount=newAmt;tx.note=document.getElementById('editNote').value;
+  logAct('edit','تعديل عملية: '+fmtC(newAmt,tx.currency)+' ← '+tx.accountName,'✏️');
+  saveLocal();pushFB();closeM('editTxModal');notify(S.lang==='ar'?'تم التعديل':'Updated');refreshAll();
+}
+
+function delTx(id){
+  if(!confirm(S.lang==='ar'?'حذف هذه العملية؟':'Delete this transaction?'))return;
+  var tx=S.transactions.find(function(t){return t.id===id;});
+  if(tx){
+    var a=S.accounts.find(function(x){return x.id===tx.accountId;});
+    if(a){var s=tx.sarAmount*(tx.type==='deposit'?-1:1);a.sarBalance+=s;a.balance=frSAR(a.sarBalance,a.mainCurrency);}
+    logAct('del','حذف عملية: '+fmtC(tx.amount,tx.currency)+' ← '+tx.accountName,'🗑️');
+  }
+  S.transactions=S.transactions.filter(function(t){return t.id!==id;});
+  saveLocal();pushFB();notify(S.lang==='ar'?'تم الحذف':'Deleted');refreshAll();
+}
+
+// ── CONVERTER ────────────────────────────────────
+function fillConvSels(){
+  var opts=CURS.map(function(c){return '<option value="'+c+'">'+c+' '+(SYM[c]||'')+'</option>';}).join('');
+  document.getElementById('cFrom').innerHTML=opts;
+  document.getElementById('cTo').innerHTML=opts;
+  document.getElementById('cTo').value='USD';
+}
+
+function calc(){
+  var f=document.getElementById('cFrom').value;
+  var t=document.getElementById('cTo').value;
+  var amt=parseFloat(document.getElementById('cAmt').value)||0;
+  var res=frSAR(toSAR(amt,f),t);
+  var rate=toSAR(1,f)/toSAR(1,t);
+  document.getElementById('cRate').textContent='1 '+f+' = '+fmt(rate)+' '+t;
+  document.getElementById('cRes').textContent=fmtC(res,t);
+}
+
+function swapConv(){
+  var f=document.getElementById('cFrom'),t=document.getElementById('cTo'),tmp=f.value;
+  f.value=t.value;t.value=tmp;calc();
+}
+
+function renderRates(){
+  document.getElementById('ratesGrid').innerHTML=CURS.filter(function(c){return c!=='SAR';}).map(function(c){
+    var r=S.rates[c]||1;
+    return '<div class="srow" style="cursor:pointer" onclick="document.getElementById(\'cFrom\').value=\'SAR\';document.getElementById(\'cTo\').value=\''+c+'\';calc()">'+
+      '<span style="font-weight:500">'+c+' <span style="color:var(--mu);font-size:11px">('+SYM[c]+')</span></span>'+
+      '<div style="text-align:left;direction:ltr">'+
+        '<div style="color:var(--pr);font-weight:600;font-size:13px">1 SAR = '+fmt(1/r)+' '+c+'</div>'+
+        '<div style="color:var(--mu);font-size:11px">1 '+c+' = '+fmt(r)+' SAR</div>'+
+      '</div></div>';
+  }).join('');
+}
+
+async function fetchRates(manual){
+  setSyncStatus('sync');
+  try{
+    var res=await fetch('https://open.er-api.com/v6/latest/SAR');
+    var data=await res.json();
+    if(data.rates){
+      CURS.filter(function(c){return c!=='SAR';}).forEach(function(c){if(data.rates[c])S.rates[c]=1/data.rates[c];});
+      saveLocal();fillRateInputs();renderRates();calc();setSyncStatus('ok');
+      if(manual)notify('✅ تم تحديث الأسعار');
+    }
+  }catch(e){if(manual)notify('❌ تعذر جلب الأسعار');}
+}
+
+function fillRateInputs(){
+  var m={usd:'USD',eur:'EUR',gbp:'GBP',cad:'CAD',aed:'AED',egp:'EGP',kwd:'KWD',bhd:'BHD',qar:'QAR',omr:'OMR',jod:'JOD'};
+  Object.entries(m).forEach(function(e){var el=document.getElementById('r-'+e[0]);if(el)el.value=S.rates[e[1]]||'';});
+}
+
+function saveRates(){
+  var m={usd:'USD',eur:'EUR',gbp:'GBP',cad:'CAD',aed:'AED',egp:'EGP',kwd:'KWD',bhd:'BHD',qar:'QAR',omr:'OMR',jod:'JOD'};
+  Object.entries(m).forEach(function(e){var v=parseFloat(document.getElementById('r-'+e[0]).value);if(v>0)S.rates[e[1]]=v;});
+  pushFB();renderRates();calc();
+}
+
+// ── DASHBOARD ────────────────────────────────────
+function renderDash(){
+  var total=S.accounts.reduce(function(s,a){return s+a.sarBalance;},0);
+  var deps=S.transactions.filter(function(t){return t.type==='deposit';}).reduce(function(s,t){return s+t.sarAmount;},0);
+  var wths=S.transactions.filter(function(t){return t.type==='withdrawal';}).reduce(function(s,t){return s+t.sarAmount;},0);
+  document.getElementById('kpiRow').innerHTML=
+    kpiCard('🏦','ic-b',S.lang==='ar'?'إجمالي الحسابات':'Accounts',S.accounts.length,'')+
+    kpiCard('💰','ic-g',S.lang==='ar'?'إجمالي الرصيد':'Total Balance (SAR)',fmt(total),'')+
+    kpiCard('⬆️','ic-g',S.lang==='ar'?'الإيداعات':'Deposits',fmt(deps),'dep')+
+    kpiCard('⬇️','ic-r',S.lang==='ar'?'الصرف':'Withdrawals',fmt(wths),'wth');
+
+  var al=document.getElementById('dashAccList');
+  if(!S.accounts.length){al.innerHTML='<div class="empty"><div class="ei">🏦</div>لا توجد حسابات</div>';}
+  else al.innerHTML=S.accounts.map(function(a){
+    var p=total>0?Math.min(100,a.sarBalance/total*100):0;
+    return '<div style="margin-bottom:14px">'+
+      '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px">'+
+        '<span style="font-weight:500">'+a.name+'</span>'+
+        '<span style="color:'+a.color+';font-weight:600">'+fmtC(a.balance,a.mainCurrency)+'</span>'+
+      '</div>'+
+      '<div class="pbar"><div class="pfill" style="width:'+p.toFixed(1)+'%;background:'+a.color+'"></div></div>'+
+      '<div style="font-size:11px;color:var(--mu);margin-top:2px">'+p.toFixed(1)+'% '+(S.lang==='ar'?'من الإجمالي':'of total')+'</div>'+
+    '</div>';
+  }).join('');
+
+  var tl=document.getElementById('dashTxList');
+  var recent=S.transactions.slice(0,7);
+  if(!recent.length){tl.innerHTML='<div class="empty"><div class="ei">💸</div>لا توجد عمليات</div>';}
+  else tl.innerHTML=recent.map(function(tx){
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd)">'+
+      '<div><div style="font-size:13px;font-weight:500">'+tx.accountName+'</div>'+
+        '<div style="font-size:11px;color:var(--mu)">'+tx.date+(tx.createdByName?' · 👤 '+tx.createdByName:'')+'</div></div>'+
+      '<div class="'+(tx.type==='deposit'?'dep':'wth')+'" style="font-size:13px">'+(tx.type==='deposit'?'+':'-')+fmtC(tx.amount,tx.currency)+'</div>'+
+    '</div>';
+  }).join('');
+}
+
+function kpiCard(icon,cls,label,val,vcls){
+  return '<div class="kpi"><div class="ic '+cls+'">'+icon+'</div>'+
+    '<div class="lb">'+label+'</div>'+
+    '<div class="vl '+(vcls||'')+'">'+val+'</div></div>';
+}
+
+// ── REPORTS ──────────────────────────────────────
+function repTab(t){
+  curRepTab=t;
+  document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('on');});
+  var el=document.getElementById('rt-'+t);if(el)el.classList.add('on');
+  renderRep(t);
+}
+
+function renderRep(tab){
+  var c=document.getElementById('repContent');
+  var ar=S.lang==='ar';
+  if(tab==='sum'){
+    if(!S.accounts.length){c.innerHTML='<div class="empty"><div class="ei">📊</div>لا توجد حسابات</div>';return;}
+    var total=S.accounts.reduce(function(s,a){return s+a.sarBalance;},0);
+    var deps=S.transactions.filter(function(t){return t.type==='deposit';}).reduce(function(s,t){return s+t.sarAmount;},0);
+    var wths=S.transactions.filter(function(t){return t.type==='withdrawal';}).reduce(function(s,t){return s+t.sarAmount;},0);
+    c.innerHTML=
+      '<div class="g4" style="margin-bottom:20px">'+
+        '<div style="background:linear-gradient(135deg,var(--pr),#3b82f6);border-radius:var(--r);padding:16px;color:#fff"><div style="font-size:12px;opacity:.85;margin-bottom:6px">'+(ar?'إجمالي الأرصدة':'Total Balance')+'</div><div style="font-size:20px;font-weight:700">'+fmtC(total,'SAR')+'</div></div>'+
+        '<div style="background:linear-gradient(135deg,#059669,#10b981);border-radius:var(--r);padding:16px;color:#fff"><div style="font-size:12px;opacity:.85;margin-bottom:6px">'+(ar?'إيداعات':'Deposits')+'</div><div style="font-size:20px;font-weight:700">'+fmtC(deps,'SAR')+'</div></div>'+
+        '<div style="background:linear-gradient(135deg,#dc2626,#ef4444);border-radius:var(--r);padding:16px;color:#fff"><div style="font-size:12px;opacity:.85;margin-bottom:6px">'+(ar?'صرف':'Withdrawals')+'</div><div style="font-size:20px;font-weight:700">'+fmtC(wths,'SAR')+'</div></div>'+
+        '<div style="background:linear-gradient(135deg,#7c3aed,#8b5cf6);border-radius:var(--r);padding:16px;color:#fff"><div style="font-size:12px;opacity:.85;margin-bottom:6px">'+(ar?'صافي':'Net')+'</div><div style="font-size:20px;font-weight:700">'+fmtC(deps-wths,'SAR')+'</div></div>'+
+      '</div>'+
+      '<div class="g2">'+S.accounts.map(function(a){
+        var txs=S.transactions.filter(function(t){return t.accountId===a.id;});
+        var d=txs.filter(function(t){return t.type==='deposit';}).reduce(function(s,t){return s+t.sarAmount;},0);
+        var w=txs.filter(function(t){return t.type==='withdrawal';}).reduce(function(s,t){return s+t.sarAmount;},0);
+        var p=total>0?Math.min(100,a.sarBalance/total*100):0;
+        return '<div class="card" style="border-right:4px solid '+a.color+'">'+
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
+            '<div style="display:flex;align-items:center;gap:10px">'+
+              '<div style="width:40px;height:40px;border-radius:10px;background:'+a.color+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:700">'+a.name[0]+'</div>'+
+              '<div><div style="font-weight:700;font-size:15px">'+a.name+'</div>'+(a.owner?'<div style="font-size:12px;color:var(--mu)">'+a.owner+'</div>':'')+'</div>'+
+            '</div>'+
+            '<div style="text-align:left;direction:ltr"><div style="font-size:20px;font-weight:700;color:'+a.color+'">'+fmtC(a.balance,a.mainCurrency)+'</div><div style="font-size:12px;color:var(--mu)">'+fmtC(a.sarBalance,'SAR')+'</div></div>'+
+          '</div>'+
+          '<div style="display:flex;gap:10px;margin-bottom:12px">'+
+            '<div style="flex:1;background:#d1fae520;border-radius:8px;padding:10px;text-align:center"><div style="font-size:11px;color:var(--mu);margin-bottom:3px">'+(ar?'إيداعات':'Deposits')+'</div><div style="font-weight:700;color:var(--su);font-size:14px">+'+fmtC(frSAR(d,a.mainCurrency),a.mainCurrency)+'</div></div>'+
+            '<div style="flex:1;background:#fee2e220;border-radius:8px;padding:10px;text-align:center"><div style="font-size:11px;color:var(--mu);margin-bottom:3px">'+(ar?'صرف':'Withdrawals')+'</div><div style="font-weight:700;color:var(--da);font-size:14px">-'+fmtC(frSAR(w,a.mainCurrency),a.mainCurrency)+'</div></div>'+
+            '<div style="flex:1;background:var(--bg);border-radius:8px;padding:10px;text-align:center"><div style="font-size:11px;color:var(--mu);margin-bottom:3px">'+(ar?'عمليات':'Ops')+'</div><div style="font-weight:700;font-size:14px">'+txs.length+'</div></div>'+
+          '</div>'+
+          '<div style="font-size:12px;color:var(--mu);display:flex;justify-content:space-between;margin-bottom:4px"><span>'+(ar?'نسبة':'% of total')+'</span><span style="font-weight:600;color:'+a.color+'">'+p.toFixed(1)+'%</span></div>'+
+          '<div class="pbar" style="height:8px;margin-bottom:10px"><div class="pfill" style="width:'+p.toFixed(1)+'%;background:'+a.color+'"></div></div>'+
+          '<div style="display:flex;flex-wrap:wrap;gap:5px">'+a.currencies.map(function(cu){return '<span style="background:'+a.color+'18;color:'+a.color+';padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600">'+cu+' = '+fmtC(frSAR(a.sarBalance,cu),cu)+'</span>';}).join('')+'</div>'+
+        '</div>';
+      }).join('')+'</div>';
+  } else if(tab==='hist'){
+    if(!S.transactions.length){c.innerHTML='<div class="empty"><div class="ei">💸</div>لا توجد عمليات</div>';return;}
+    c.innerHTML='<div class="card" style="padding:0;overflow:hidden"><div class="tw"><table><thead><tr>'+
+      '<th>'+(ar?'التاريخ':'Date')+'</th><th>'+(ar?'الحساب':'Account')+'</th><th>'+(ar?'النوع':'Type')+'</th>'+
+      '<th>'+(ar?'المبلغ':'Amount')+'</th><th>'+(ar?'بالريال':'SAR')+'</th><th>'+(ar?'بواسطة':'By')+'</th><th>'+(ar?'ملاحظة':'Note')+'</th>'+
+      '</tr></thead><tbody>'+
+      S.transactions.map(function(tx){
+        var isD=tx.type==='deposit';
+        var a=S.accounts.find(function(x){return x.id===tx.accountId;});
+        var bals=a?a.currencies.map(function(cu){return fmtC(frSAR(tx.sarBalanceAfter,cu),cu);}).join(' | '):'—';
+        return '<tr>'+
+          '<td style="white-space:nowrap">'+tx.date+'</td><td>'+tx.accountName+'</td>'+
+          '<td><span class="badge '+(isD?'bg-g':'bg-r')+'">'+(isD?(ar?'إيداع':'Dep'):(ar?'صرف':'Wth'))+'</span></td>'+
+          '<td class="'+(isD?'dep':'wth')+'" style="white-space:nowrap">'+(isD?'+':'-')+fmtC(tx.amount,tx.currency)+'</td>'+
+          '<td style="font-size:12px;color:var(--mu)">'+fmtC(tx.sarAmount,'SAR')+'</td>'+
+          '<td style="font-size:12px;color:var(--mu)">'+(tx.createdByName?'👤 '+tx.createdByName:'—')+'</td>'+
+          '<td style="color:var(--mu)">'+(tx.note||'—')+'</td></tr>';
+      }).join('')+'</tbody></table></div></div>';
+  } else {
+    var byCur={};
+    S.transactions.forEach(function(tx){
+      if(!byCur[tx.currency])byCur[tx.currency]={d:0,w:0,sd:0,sw:0,n:0};
+      if(tx.type==='deposit'){byCur[tx.currency].d+=tx.amount;byCur[tx.currency].sd+=tx.sarAmount;}
+      else{byCur[tx.currency].w+=tx.amount;byCur[tx.currency].sw+=tx.sarAmount;}
+      byCur[tx.currency].n++;
+    });
+    if(!Object.keys(byCur).length){c.innerHTML='<div class="empty"><div class="ei">💱</div>لا توجد عمليات</div>';return;}
+    c.innerHTML='<div class="g3">'+Object.entries(byCur).map(function(e){
+      var cur=e[0],d=e[1],net=d.d-d.w,tot=d.d+d.w,p=tot>0?d.d/tot*100:50;
+      return '<div class="card">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
+          '<div style="display:flex;align-items:center;gap:10px">'+
+            '<div style="width:44px;height:44px;border-radius:12px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:var(--pr);border:1.5px solid var(--bd)">'+(SYM[cur]||cur[0])+'</div>'+
+            '<div><div style="font-size:17px;font-weight:700">'+cur+'</div><div style="font-size:12px;color:var(--mu)">'+d.n+' '+(ar?'عملية':'ops')+'</div></div>'+
+          '</div>'+
+          '<div style="text-align:left;direction:ltr"><div style="font-size:18px;font-weight:700;color:'+(net>=0?'var(--su)':'var(--da)')+';">'+(net>=0?'+':'')+fmtC(net,cur)+'</div></div>'+
+        '</div>'+
+        '<div style="display:flex;gap:8px;margin-bottom:12px">'+
+          '<div style="flex:1;background:#d1fae520;border-radius:8px;padding:10px"><div style="font-size:11px;color:var(--mu);margin-bottom:3px">'+(ar?'إيداعات':'Deposits')+'</div><div style="font-weight:700;color:var(--su);font-size:14px">+'+fmtC(d.d,cur)+'</div></div>'+
+          '<div style="flex:1;background:#fee2e220;border-radius:8px;padding:10px"><div style="font-size:11px;color:var(--mu);margin-bottom:3px">'+(ar?'صرف':'Withdrawals')+'</div><div style="font-weight:700;color:var(--da);font-size:14px">-'+fmtC(d.w,cur)+'</div></div>'+
+        '</div>'+
+        '<div style="font-size:11px;color:var(--mu);margin-bottom:5px">'+(ar?'نسبة الإيداع':'Deposit ratio')+': '+p.toFixed(0)+'%</div>'+
+        '<div class="pbar" style="height:6px"><div class="pfill" style="width:'+p.toFixed(0)+'%;background:var(--su)"></div></div>'+
+      '</div>';
+    }).join('')+'</div>';
+  }
+}
+
+// ── EXPORT ───────────────────────────────────────
+function exportCSV(){
+  var rows=[['Date','Account','Type','Amount','Currency','SAR','Balance After SAR','By','Note']];
+  S.transactions.forEach(function(t){rows.push([t.date,t.accountName,t.type,t.amount,t.currency,t.sarAmount.toFixed(2),t.sarBalanceAfter.toFixed(2),t.createdByName||'',t.note||'']);});
+  var csv=rows.map(function(r){return r.map(function(v){return '"'+v+'"';}).join(',');}).join('\n');
+  var a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);a.download='fintrack.csv';a.click();
+  notify(S.lang==='ar'?'تم التصدير':'Exported');
+}
+
+// ── SETTINGS ─────────────────────────────────────
+function setMode(m){
+  S.dark=m==='dark';document.body.classList.toggle('dark',S.dark);
+  document.getElementById('modeL').className='btn btn-o'+(S.dark?'':' btn-p');
+  document.getElementById('modeD').className='btn btn-o'+(S.dark?' btn-p':'');
+  document.getElementById('modeL').style.flex='1';document.getElementById('modeD').style.flex='1';
+  document.getElementById('btn-dark').textContent=S.dark?'☀️':'🌙';
+  saveLocal();
+}
+
+function setPrimary(c,sb){
+  S.primaryColor=c;S.sidebarColor=sb;
+  document.documentElement.style.setProperty('--pr',c);
+  document.querySelector('.sidebar').style.background=sb;
+  document.querySelectorAll('#themeColors .cdot').forEach(function(d){d.classList.remove('on');});
+  if(event&&event.target)event.target.classList.add('on');
+  saveLocal();
+}
+
+function clearAll(){
+  if(!confirm(S.lang==='ar'?'حذف جميع البيانات نهائياً؟':'Delete all data permanently?'))return;
+  S.accounts=[];S.transactions=[];
+  saveLocal();pushFB();notify(S.lang==='ar'?'تم الحذف':'Deleted');refreshAll();
+}
+
+function toggleDark(){setMode(S.dark?'light':'dark');}
+
+// ── NAVIGATION ───────────────────────────────────
+var PTITLES={
+  'dash':{ar:'لوحة التحكم',en:'Dashboard'},
+  'acc':{ar:'الحسابات',en:'Accounts'},
+  'tx':{ar:'العمليات',en:'Transactions'},
+  'conv':{ar:'تحويل العملات',en:'Currency Transfer'},
+  'rep':{ar:'التقارير',en:'Reports'},
+  'set':{ar:'الإعدادات',en:'Settings'}
+};
+
+function go(page){
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on');});
+  document.querySelectorAll('.nav').forEach(function(n){n.classList.remove('on');});
+  document.getElementById('page-'+page).classList.add('on');
+  document.getElementById('nav-'+page).classList.add('on');
+  var t=PTITLES[page];
+  document.getElementById('pageTitle').textContent=t?t[S.lang]||t.ar:page;
+  if(page==='tx')renderTx();
+  if(page==='dash')renderDash();
+  if(page==='acc')renderAccounts();
+  if(page==='conv'){calc();renderRates();}
+  if(page==='rep')renderRep(curRepTab);
+}
+
+// ── LANG ─────────────────────────────────────────
+var L={
+  ar:{'lbl-sub':'نظام متابعة الرصيد المشترك','tab-in':'تسجيل الدخول','tab-up':'إنشاء حساب','s-main':'الرئيسية','lbl-dash':'لوحة التحكم','lbl-acc':'الحسابات','lbl-tx':'العمليات','lbl-conv':'تحويل العملات','s-rep':'التقارير','lbl-rep':'التقارير','s-act':'النشاط','lbl-act':'سجل النشاط','lbl-me':'لوحتي','s-set':'الإعدادات','lbl-set':'الإعدادات','btn-actlog':'📋 النشاط','btn-me':'👤 لوحتي','lbl-accsum':'ملخص الحسابات','btn-all':'عرض الكل','lbl-recenttx':'آخر العمليات','lbl-acctitle':'دليل الحسابات','btn-newacc':'+ حساب جديد','lbl-txtitle':'سجل العمليات','btn-exp':'📥 تصدير','opt-dep':'إيداع','opt-wth':'صرف','th-dt':'التاريخ','th-ac':'الحساب','th-tp':'النوع','th-am':'المبلغ','th-bl':'الرصيد بعد','th-by':'بواسطة','th-nt':'ملاحظة','th-ac2':'إجراء','lbl-convtitle':'تحويل العملات','lbl-from':'من العملة','lbl-camount':'المبلغ','lbl-to':'إلى العملة','lbl-rate':'سعر الصرف','lbl-res':'النتيجة','lbl-ratesTitle':'أسعار الصرف (من SAR)','lbl-reptitle':'التقارير','rt-sum':'ملخص الأرصدة','rt-hist':'تاريخ العمليات','rt-cur':'حسب العملة','lbl-settitle':'الإعدادات','lbl-appear':'المظهر','lbl-mode':'الوضع','lbl-light':'فاتح','lbl-dark':'داكن','lbl-color':'لون الثيم','lbl-rset':'أسعار الصرف','lbl-fetchr':'جلب أسعار مباشرة','lbl-danger':'منطقة الخطر','btn-clear':'🗑️ حذف جميع البيانات','accModalTitle':'إضافة حساب جديد','lbl-aname':'اسم الحساب','lbl-aowner':'صاحب الحساب','lbl-acur':'العملات','lbl-abal':'الرصيد الابتدائي','lbl-acolor':'لون الحساب','btn-canacc':'إلغاء','btn-saveacc':'حفظ','txModalTitle':'إضافة عملية','lbl-txacc':'الحساب','lbl-txtype':'نوع العملية','lbl-dep':'إيداع','lbl-wth':'صرف','lbl-txcur':'العملة','lbl-txamt':'المبلغ','lbl-txdate':'التاريخ','lbl-txnote':'ملاحظة','btn-cantx':'إلغاء','btn-savetx':'تنفيذ','lbl-prev':'الرصيد بعد العملية:','lbl-edittx':'تعديل العملية','lbl-editamt':'المبلغ','lbl-editnote':'الملاحظة','btn-canedit':'إلغاء','btn-saveedit':'حفظ','lbl-actlog':'سجل نشاط المستخدمين','lbl-mydash':'لوحتي الشخصية','btn-add':'+ إضافة عملية','btn-lang-top':'EN'},
+  en:{'lbl-sub':'Shared Balance Tracker','tab-in':'Sign In','tab-up':'Register','s-main':'Main','lbl-dash':'Dashboard','lbl-acc':'Accounts','lbl-tx':'Transactions','lbl-conv':'Currency Transfer','s-rep':'Reports','lbl-rep':'Reports','s-act':'Activity','lbl-act':'Activity Log','lbl-me':'My Dashboard','s-set':'Settings','lbl-set':'Settings','btn-actlog':'📋 Activity','btn-me':'👤 Mine','lbl-accsum':'Accounts Summary','btn-all':'View All','lbl-recenttx':'Recent Transactions','lbl-acctitle':'Accounts Directory','btn-newacc':'+ New Account','lbl-txtitle':'Transaction History','btn-exp':'📥 Export','opt-dep':'Deposit','opt-wth':'Withdrawal','th-dt':'Date','th-ac':'Account','th-tp':'Type','th-am':'Amount','th-bl':'Balance After','th-by':'By','th-nt':'Note','th-ac2':'Action','lbl-convtitle':'Currency Transfer','lbl-from':'From','lbl-camount':'Amount','lbl-to':'To','lbl-rate':'Rate','lbl-res':'Result','lbl-ratesTitle':'Exchange Rates (from SAR)','lbl-reptitle':'Reports','rt-sum':'Balance Summary','rt-hist':'Transaction History','rt-cur':'By Currency','lbl-settitle':'Settings','lbl-appear':'Appearance','lbl-mode':'Mode','lbl-light':'Light','lbl-dark':'Dark','lbl-color':'Theme Color','lbl-rset':'Exchange Rates','lbl-fetchr':'Fetch Live Rates','lbl-danger':'Danger Zone','btn-clear':'🗑️ Delete All Data','accModalTitle':'Add New Account','lbl-aname':'Account Name','lbl-aowner':'Account Owner','lbl-acur':'Currencies','lbl-abal':'Initial Balance','lbl-acolor':'Account Color','btn-canacc':'Cancel','btn-saveacc':'Save','txModalTitle':'Add Transaction','lbl-txacc':'Account','lbl-txtype':'Transaction Type','lbl-dep':'Deposit','lbl-wth':'Withdrawal','lbl-txcur':'Currency','lbl-txamt':'Amount','lbl-txdate':'Date','lbl-txnote':'Note','btn-cantx':'Cancel','btn-savetx':'Execute','lbl-prev':'Balance after transaction:','lbl-edittx':'Edit Transaction','lbl-editamt':'Amount','lbl-editnote':'Note','btn-canedit':'Cancel','btn-saveedit':'Save','lbl-actlog':'User Activity Log','lbl-mydash':'My Dashboard','btn-add':'+ Add Transaction','btn-lang-top':'عربي'}
+};
+
+function setLang(l){
+  S.lang=l;document.documentElement.lang=l;document.body.dir=l==='ar'?'rtl':'ltr';
+  document.getElementById('btn-ar').className='lBtn '+(l==='ar'?'on':'');
+  document.getElementById('btn-en').className='lBtn '+(l==='en'?'on':'');
+  var lb=L[l]||L.ar;
+  Object.entries(lb).forEach(function(e){var el=document.getElementById(e[0]);if(el)el.textContent=e[1];});
+  updateFAccSel();renderDash();renderAccounts();renderTx();renderRates();renderRep(curRepTab);
+  saveLocal();
+}
+
+// ── REFRESH ──────────────────────────────────────
+function refreshAll(){
+  updateFAccSel();renderDash();renderAccounts();renderTx();renderRates();calc();
+  var page=document.querySelector('.page.on');
+  if(page&&page.id==='page-rep')renderRep(curRepTab);
+}
+
+// ── INIT ─────────────────────────────────────────
+loadLocal();
+document.body.classList.toggle('dark',S.dark);
+document.getElementById('btn-dark').textContent=S.dark?'☀️':'🌙';
+document.documentElement.style.setProperty('--pr',S.primaryColor||'#1a56db');
+document.querySelector('.sidebar').style.background=S.sidebarColor||'#1e293b';
+setLang(S.lang||'ar');
+fillConvSels();fillRateInputs();calc();renderRates();refreshAll();
+
+// Open tx modal with init
+document.getElementById('btn-add').onclick=function(){initTxModal();openM('txModal');};
+
+// Init Firebase after page loads
+window.addEventListener('load',function(){
+  if(typeof firebase!=='undefined'){
+    initFB();
+    fetchRates(false);
+    setInterval(function(){fetchRates(false);},30*60*1000);
+  }else{
+    console.error('Firebase not loaded');
+    setSyncStatus('err');
+  }
+});
+
+</script>
+</body>
+</html>
