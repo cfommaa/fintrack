@@ -1763,7 +1763,10 @@ function renderUsers(){
     var isAdmin=me&&me.role==='admin';
     if(warn)warn.style.display=isAdmin?'none':'block';
     if(!isAdmin){
-      el.innerHTML='<div class="empty"><div class="ei">🔒</div>هذه الصفحة للمدير فقط</div>';
+      el.innerHTML='<div class="empty"><div class="ei">🔒</div>'+
+        '<div style="margin-bottom:14px">هذه الصفحة للمدير فقط</div>'+
+        '<button class="btn btn-p" onclick="makeCurrentUserAdmin()">طلب صلاحية المدير (إذا لم يكن هناك مدير)</button>'+
+      '</div>';
       return;
     }
     if(!users.length){
