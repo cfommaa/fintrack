@@ -212,8 +212,8 @@ body.dark .bg-g{background:#064e3b;color:#6ee7b7}.dark .bg-r{background:#450a0a;
     <div class="nav" onclick="openActivity()" id="nav-act"><span>📋</span><span id="lbl-act">سجل النشاط</span></div>
     <div class="nav" onclick="openMyDash()" id="nav-me"><span>👤</span><span id="lbl-me">لوحتي</span></div>
     <div class="sSection" id="s-tools">الأدوات</div>
-    <div class="nav" onclick="go('budgets')" id="nav-budgets"><span>🎯</span><span id="lbl-budgets">الميزانيات</span></div>
-    <div class="nav" onclick="go('goals')" id="nav-goals"><span>⭐</span><span id="lbl-goals">الأهداف</span></div>
+    <div class="nav" onclick="go(\"budgets\")" id="nav-budgets"><span>🎯</span><span id="lbl-budgets">الميزانيات</span></div>
+    <div class="nav" onclick="go(\"goals\")" id="nav-goals"><span>⭐</span><span id="lbl-goals">الأهداف</span></div>
     <div class="nav" onclick="go('notif')" id="nav-notif"><span>🔔</span><span id="lbl-notif">الإشعارات</span><span id="notif-badge" style="background:#e02424;color:#fff;border-radius:99px;font-size:10px;padding:1px 6px;margin-right:4px;display:none">0</span></div>
     <div class="sSection" id="s-set">الإعدادات</div>
     <div class="nav" onclick="go('users')" id="nav-users"><span>👥</span><span id="lbl-users">المستخدمين</span></div>
@@ -1157,14 +1157,14 @@ function renderDash(){
       var spent=S.transactions.filter(function(t){return t.type==="withdrawal"&&t.date.startsWith(b.month)&&(!b.accId||t.accountId===b.accId);}).reduce(function(s,t){return s+t.sarAmount;},0);
       var pct=b.amount>0?Math.min(100,(spent/b.amount)*100):0;
       var color=pct>=100?"var(--da)":pct>=80?"var(--wa)":"var(--su)";
-      dashExtra+='<div class="card" style="flex:1;min-width:160px;cursor:pointer;border-right:3px solid '+color+'" onclick="go('budgets')">'+
+      dashExtra+='<div class="card" style="flex:1;min-width:160px;cursor:pointer;border-right:3px solid '+color+'" onclick="go(\"budgets\")">'+
         '<div style="font-size:12px;color:var(--mu);margin-bottom:4px">🎯 '+b.name+'</div>'+
         '<div class="pbar" style="height:6px;margin-bottom:4px"><div class="pfill" style="width:'+pct.toFixed(0)+'%;background:'+color+'"></div></div>'+
         '<div style="font-size:12px;font-weight:600;color:'+color+'">'+pct.toFixed(0)+'% مستخدم</div></div>';
     });
     activeGoals.slice(0,2).forEach(function(gl){
       var pct=gl.target>0?Math.min(100,(gl.current/gl.target)*100):0;
-      dashExtra+='<div class="card" style="flex:1;min-width:160px;cursor:pointer;border-right:3px solid var(--pr)" onclick="go('goals')">'+
+      dashExtra+='<div class="card" style="flex:1;min-width:160px;cursor:pointer;border-right:3px solid var(--pr)" onclick="go(\"goals\")">'+
         '<div style="font-size:12px;color:var(--mu);margin-bottom:4px">'+gl.icon+' '+gl.name+'</div>'+
         '<div class="pbar" style="height:6px;margin-bottom:4px"><div class="pfill" style="width:'+pct.toFixed(0)+'%;background:var(--pr)"></div></div>'+
         '<div style="font-size:12px;font-weight:600">'+pct.toFixed(0)+'% مكتمل</div></div>';
@@ -1384,6 +1384,9 @@ function refreshAll(){
   if(page.id==='page-users')renderUsers();
 }
 
+// Helper to build onclick with ID
+function oid(fn,id){return 'onclick="'+fn+'(\''+id+'\')"';}
+
 // ── BUDGETS ──────────────────────────────────────
 function openNewBudget(){
   document.getElementById('budgetModalTitle').textContent='إضافة ميزانية جديدة';
@@ -1442,8 +1445,8 @@ function renderBudgets(){
           '<div style="font-weight:600;font-size:14px">'+b.name+'</div>'+
           '<div style="font-size:11px;color:var(--mu)">'+(CAT_NAMES[b.cat]||'أخرى')+' · '+b.month+'</div></div>'+
         '<div style="display:flex;gap:5px">'+
-          '<button class="btn btn-o btn-ic btn-sm" onclick="editBudget(''+b.id+'')">✏️</button>'+
-          '<button class="btn btn-o btn-ic btn-sm" onclick="delBudget(''+b.id+'')">🗑️</button>'+
+          "<button class='btn btn-o btn-ic btn-sm' "+oid('editBudget',b.id)+">✏️</button>"+
+          "<button class='btn btn-o btn-ic btn-sm' "+oid('delBudget',b.id)+">🗑️</button>"+
         '</div>'+
       '</div>'+
       '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px">'+
@@ -1538,8 +1541,8 @@ function renderGoals(){
         '</div>'+
         '<div style="display:flex;gap:5px">'+
           (isDone?'<span style="background:#d1fae5;color:#065f46;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600">✅ مكتمل</span>':'')+
-          '<button class="btn btn-o btn-ic btn-sm" onclick="editGoal(''+gl.id+'')">✏️</button>'+
-          '<button class="btn btn-o btn-ic btn-sm" onclick="delGoal(''+gl.id+'')">🗑️</button>'+
+          "<button class='btn btn-o btn-ic btn-sm' "+oid('editGoal',gl.id)+">✏️</button>"+
+          "<button class='btn btn-o btn-ic btn-sm' "+oid('delGoal',gl.id)+">🗑️</button>"+
         '</div>'+
       '</div>'+
       '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px">'+
@@ -1551,7 +1554,7 @@ function renderGoals(){
         '<span style="color:var(--mu)">'+pct.toFixed(1)+'% مكتمل</span>'+
         '<span style="font-weight:600">متبقي: '+fmtC(Math.max(0,gl.target-gl.current),'SAR')+'</span>'+
       '</div>'+
-      '<button class="btn btn-p btn-sm" onclick="addToGoal(''+gl.id+'')" style="width:100%">+ إضافة مبلغ</button>'+
+      "<button class='btn btn-p btn-sm' "+oid('addToGoal',gl.id)+" style='width:100%'>+ إضافة مبلغ</button>"+
       (gl.createdByName?'<div style="font-size:10px;color:var(--mu);margin-top:8px;border-top:1px solid var(--bd);padding-top:6px">أنشأه: '+gl.createdByName+'</div>':'')+
     '</div>';
   }).join('');
@@ -1612,7 +1615,8 @@ function renderNotifications(){
   var notifs=S.notifications||[];
   if(!notifs.length){list.innerHTML='<div class="empty"><div class="ei">🔔</div>لا توجد إشعارات</div>';return;}
   list.innerHTML=notifs.map(function(n){
-    return '<div style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-bottom:1px solid var(--bd);background:'+(n.read?'transparent':'var(--bg)')+';cursor:pointer" onclick="markRead(''+n.id+'')">'+
+    var bg=n.read?'transparent':'var(--bg)';
+    return '<div style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-bottom:1px solid var(--bd);background:'+bg+';cursor:pointer" '+oid('markRead',n.id)+'>'+
       '<div style="width:38px;height:38px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;border:1px solid var(--bd)">'+(n.icon||'🔔')+'</div>'+
       '<div style="flex:1">'+
         '<div style="font-size:13.5px;font-weight:'+(n.read?'400':'600')+'">'+n.msg+'</div>'+
@@ -1686,8 +1690,7 @@ function renderUsers(){
           '<td><span style="padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;background:'+(u.role==='admin'?'#ede9fe':'#f1f5f9')+';color:'+(u.role==='admin'?'#5b21b6':'#475569')+'">'+
             (u.role==='admin'?'👑 مدير':'👤 مستخدم')+'</span></td>'+
           '<td style="font-size:12px;color:var(--mu)">'+( u.lastSeen?timeAgo(u.lastSeen):'—')+'</td>'+
-          '<td>'+(isMe?'—':'<button class="btn btn-o btn-sm" onclick="toggleRole(''+u.uid+'',''+( u.role||'user')+'')">'+
-            (u.role==='admin'?'تحويل لمستخدم':'ترقية لمدير')+'</button>')+'</td>'+
+          '<td>'+(isMe?'—':'<button class="btn btn-o btn-sm" onclick="toggleRole(\''+u.uid+'\''+',\''+(u.role||'user')+'\')">'+(u.role==='admin'?'تحويل لمستخدم':'ترقية لمدير')+'</button>')+'</td>'+
         '</tr>';
       }).join('')+'</tbody></table></div></div>';
   });
