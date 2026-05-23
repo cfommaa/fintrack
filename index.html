@@ -30,6 +30,11 @@
 
   window.dispatchEvent(new Event('fbReady'));
 </script>
+<meta name="theme-color" content="#1e293b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FinTrack">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💳</text></svg>">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -41,8 +46,15 @@ body.dark{--bg:#0f172a;--card:#1e293b;--bd:rgba(255,255,255,.08);--tx:#f1f5f9;--
 body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:var(--tx);display:flex;min-height:100vh;font-size:14px}
 
 /* LOGIN */
-#loginWrap{position:fixed;inset:0;background:linear-gradient(135deg,#0f172a,#1e3a5f);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px}
+#loginWrap{position:fixed;inset:0;background:linear-gradient(135deg,#0f172a,#1e3a5f);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px;overflow-y:auto}
 .loginBox{width:100%;max-width:380px}
+@media(max-width:480px){
+  .loginBox{max-width:100%}
+  .loginLogo .icon{font-size:40px}
+  .loginLogo h1{font-size:22px}
+  .loginCard{padding:20px}
+  .loginBtn{padding:13px;font-size:15px}
+}
 .loginLogo{text-align:center;margin-bottom:28px}
 .loginLogo .icon{font-size:48px;display:block;margin-bottom:8px}
 .loginLogo h1{font-size:26px;font-weight:700;color:#fff;margin-bottom:4px}
@@ -88,6 +100,7 @@ body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:v
 .topLeft{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .topRight{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .syncBadge{font-size:11px;padding:3px 10px;border-radius:20px;background:var(--bg);border:1px solid var(--bd);color:var(--mu)}
+@media(max-width:480px){.syncBadge span#syncTxt{display:none}.syncBadge{padding:3px 7px}}
 .content{padding:20px;flex:1}
 .page{display:none}.page.on{display:block}
 
@@ -97,7 +110,49 @@ body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:v
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
 @media(max-width:1100px){.g4{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:768px){.sidebar{width:100%;min-height:auto;position:fixed;bottom:0;top:auto;flex-direction:row;overflow-x:auto;z-index:200}.sLogo,.sSection,.sUser,.langRow{display:none}.nav{flex-direction:column;gap:2px;padding:8px;font-size:10px;min-width:55px;justify-content:center;text-align:center;border-right:none!important;border-top:3px solid transparent}.nav.on{border-top:3px solid #60a5fa}.main{margin-right:0;margin-bottom:64px}.g2,.g3{grid-template-columns:1fr}.g4{grid-template-columns:1fr 1fr}}
+@media(max-width:768px){
+  /* Sidebar becomes bottom nav bar */
+  .sidebar{width:100%;min-height:auto;position:fixed;bottom:0;top:auto;flex-direction:row;overflow-x:auto;z-index:200;border-top:1px solid rgba(255,255,255,.1);box-shadow:0 -4px 20px rgba(0,0,0,.3)}
+  .sLogo,.sSection{display:none}
+  .sNav{flex:1;display:flex;flex-direction:row;overflow-x:auto;padding:0;scrollbar-width:none}
+  .sNav::-webkit-scrollbar{display:none}
+  .nav{flex-direction:column;gap:2px;padding:8px 6px;font-size:9px;min-width:52px;max-width:72px;justify-content:center;align-items:center;text-align:center;border-right:none!important;border-top:3px solid transparent;flex-shrink:0}
+  .nav span:first-child{font-size:22px;line-height:1}
+  .nav.on{border-top:3px solid #60a5fa;background:rgba(255,255,255,.1)}
+  .main{margin-right:0;margin-bottom:70px}
+  /* Grids */
+  .g2,.g3{grid-template-columns:1fr}
+  .g4{grid-template-columns:1fr 1fr}
+  /* Topbar */
+  .topbar{padding:10px 12px;gap:6px;flex-wrap:nowrap;overflow-x:auto}
+  .topTitle{font-size:14px;white-space:nowrap}
+  .topLeft{gap:5px;flex-shrink:0}
+  .topLeft .btn{padding:6px 10px;font-size:12px}
+  #btn-add{padding:7px 12px;font-size:12px}
+  #uNameTopWrap{display:none!important}
+  /* Content */
+  .content{padding:12px}
+  /* Cards */
+  .card{padding:14px}
+  .kpi{padding:13px}
+  .kpi .vl{font-size:18px}
+  /* Modal */
+  .modal{padding:18px;border-radius:12px}
+  .mTitle{font-size:15px}
+  /* Statement modal */
+  #stmtModal{padding:0;align-items:flex-end}
+  #stmtModal .modal{border-radius:16px 16px 0 0;max-height:92vh;width:100%;margin:0}
+  /* Table scroll */
+  .tw{-webkit-overflow-scrolling:touch}
+  /* KPI grid on mobile */
+  #kpiRow{grid-template-columns:1fr 1fr;gap:10px}
+  /* FAB button */
+  #fab-add{display:flex}
+}
+@media(min-width:769px){#fab-add{display:none}}
+/* FAB floating button for mobile */
+#fab-add{position:fixed;bottom:78px;left:16px;z-index:150;width:52px;height:52px;border-radius:50%;background:var(--pr);color:#fff;border:none;font-size:24px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.3);align-items:center;justify-content:center;transition:transform .2s}
+#fab-add:active{transform:scale(.92)}
 
 .kpi{background:var(--card);border-radius:var(--r);border:1px solid var(--bd);padding:16px}
 .kpi .ic{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;margin-bottom:10px}
@@ -107,7 +162,7 @@ body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:v
 body.dark .ic-b{background:#1e3a5f}.dark .ic-g{background:#064e3b}.dark .ic-r{background:#450a0a}.dark .ic-p{background:#2e1065}
 
 /* BUTTONS */
-.btn{display:inline-flex;align-items:center;gap:5px;padding:8px 14px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:500;transition:all .15s;font-family:inherit}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:8px 14px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:500;transition:all .15s;font-family:inherit;-webkit-tap-highlight-color:transparent}
 .btn-p{background:var(--pr);color:#fff}.btn-p:hover{opacity:.88}
 .btn-o{background:transparent;border:1px solid var(--bd);color:var(--tx)}.btn-o:hover{background:var(--bg)}
 .btn-d{background:var(--da);color:#fff}
@@ -122,7 +177,7 @@ body.dark .ic-b{background:#1e3a5f}.dark .ic-g{background:#064e3b}.dark .ic-r{ba
 
 /* TABLE */
 .tw{overflow-x:auto}
-table{width:100%;border-collapse:collapse;min-width:580px}
+table{width:100%;border-collapse:collapse;min-width:580px;touch-action:pan-x}
 th{font-size:11px;text-transform:uppercase;color:var(--mu);padding:10px 12px;border-bottom:2px solid var(--bd);text-align:right;font-weight:600;white-space:nowrap}
 td{padding:11px 12px;border-bottom:1px solid var(--bd);font-size:13px}
 tr:last-child td{border-bottom:none}
@@ -140,7 +195,7 @@ body.dark .bg-g{background:#064e3b;color:#6ee7b7}.dark .bg-r{background:#450a0a;
 .tab.on{background:var(--card);color:var(--tx);box-shadow:0 1px 4px rgba(0,0,0,.1)}
 
 /* MODAL */
-.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:16px}
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:16px;overflow-y:auto}
 .ov.on{display:flex}
 .modal{background:var(--card);border-radius:16px;padding:24px;width:440px;max-width:100%;max-height:90vh;overflow-y:auto}
 .mTitle{font-size:16px;font-weight:700;margin-bottom:18px}
@@ -242,7 +297,7 @@ body.dark .bg-g{background:#064e3b;color:#6ee7b7}.dark .bg-r{background:#450a0a;
 <div class="main">
   <div class="topbar">
     <div class="topLeft">
-      <button class="btn btn-p btn-sm" onclick="openM('txModal')" id="btn-add">+ إضافة عملية</button>
+      <button class="btn btn-p btn-sm" onclick="initTxModal();openM('txModal')" id="btn-add">+ إضافة عملية</button>
       <button class="btn btn-o btn-sm" onclick="toggleDark()" id="btn-dark">🌙</button>
       <button class="btn btn-o btn-sm" onclick="setLang(S.lang==='ar'?'en':'ar')" id="btn-lang-top">EN</button>
       <span class="syncBadge" id="syncBadge">⚡ <span id="syncTxt">جاري الاتصال...</span></span>
@@ -614,6 +669,7 @@ body.dark .bg-g{background:#064e3b;color:#6ee7b7}.dark .bg-r{background:#450a0a;
   </div>
 </div>
 
+<button id="fab-add" onclick="initTxModal();openM('txModal')" title="إضافة عملية">+</button>
 <div class="notif" id="notif"></div>
 
 <script>
