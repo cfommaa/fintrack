@@ -95,9 +95,9 @@ body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:v
 
 /* MAIN */
 .main{margin-right:220px;flex:1;display:flex;flex-direction:column;min-height:100vh}
-.topbar{background:var(--card);border-bottom:1px solid var(--bd);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;position:sticky;top:0;z-index:50}
-.topTitle{font-size:16px;font-weight:600}
-.topLeft{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.topbar{background:var(--card);border-bottom:1px solid var(--bd);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;position:sticky;top:0;z-index:50}
+.topTitle{font-size:16px;font-weight:600;flex:1}
+.topLeft{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .topRight{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .syncBadge{font-size:11px;padding:3px 10px;border-radius:20px;background:var(--bg);border:1px solid var(--bd);color:var(--mu)}
 @media(max-width:480px){.syncBadge span#syncTxt{display:none}.syncBadge{padding:3px 7px}}
@@ -111,43 +111,98 @@ body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:v
 .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
 @media(max-width:1100px){.g4{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:768px){
-  /* Sidebar becomes bottom nav bar */
-  .sidebar{width:100%;min-height:auto;position:fixed;bottom:0;top:auto;flex-direction:row;overflow-x:auto;z-index:200;border-top:1px solid rgba(255,255,255,.1);box-shadow:0 -4px 20px rgba(0,0,0,.3)}
+  /* Sidebar → bottom nav */
+  .sidebar{
+    width:100%;min-height:auto;position:fixed;bottom:0;top:auto;
+    flex-direction:row;overflow-x:auto;z-index:200;
+    border-top:1px solid rgba(255,255,255,.1);
+    box-shadow:0 -4px 20px rgba(0,0,0,.3);
+    direction:ltr;
+  }
   .sLogo,.sSection{display:none}
-  .sNav{flex:1;display:flex;flex-direction:row;overflow-x:auto;padding:0;scrollbar-width:none}
+  .sNav{
+    flex:1;display:flex;flex-direction:row;overflow-x:auto;
+    padding:0;scrollbar-width:none;direction:ltr;
+    justify-content:space-around;
+  }
   .sNav::-webkit-scrollbar{display:none}
-  .nav{flex-direction:column;gap:2px;padding:8px 6px;font-size:9px;min-width:52px;max-width:72px;justify-content:center;align-items:center;text-align:center;border-right:none!important;border-top:3px solid transparent;flex-shrink:0}
-  .nav span:first-child{font-size:22px;line-height:1}
+  .nav{
+    flex-direction:column;gap:2px;padding:8px 4px;
+    font-size:9px;min-width:48px;flex:1;
+    justify-content:center;align-items:center;text-align:center;
+    border-right:none!important;border-top:3px solid transparent;
+    flex-shrink:0;white-space:nowrap;overflow:hidden;
+  }
+  .nav span:first-child{font-size:20px;line-height:1.2}
+  .nav span:last-child{font-size:9px;display:block;margin-top:2px}
   .nav.on{border-top:3px solid #60a5fa;background:rgba(255,255,255,.1)}
-  .main{margin-right:0;margin-bottom:70px}
+
+  /* Main content */
+  .main{margin-right:0;margin-bottom:72px}
+
+  /* Topbar */
+  .topbar{
+    padding:8px 12px;gap:6px;
+    flex-wrap:nowrap;overflow:hidden;
+    flex-direction:row-reverse;
+  }
+  .topTitle{font-size:13px;white-space:nowrap;flex:1;text-align:center}
+  .topLeft{gap:5px;flex-shrink:0;flex-direction:row-reverse}
+  .topLeft .btn{padding:6px 8px;font-size:11px}
+  #btn-add{padding:7px 11px;font-size:11px;white-space:nowrap}
+  #uNameTopWrap{display:none!important}
+  #uAvatarTop{width:26px;height:26px;font-size:11px}
+  .syncBadge{font-size:10px;padding:2px 7px}
+
   /* Grids */
   .g2,.g3{grid-template-columns:1fr}
-  .g4{grid-template-columns:1fr 1fr}
-  /* Topbar */
-  .topbar{padding:10px 12px;gap:6px;flex-wrap:nowrap;overflow-x:auto}
-  .topTitle{font-size:14px;white-space:nowrap}
-  .topLeft{gap:5px;flex-shrink:0}
-  .topLeft .btn{padding:6px 10px;font-size:12px}
-  #btn-add{padding:7px 12px;font-size:12px}
-  #uNameTopWrap{display:none!important}
-  /* Content */
-  .content{padding:12px}
+  .g4{grid-template-columns:1fr 1fr;gap:10px}
+  #kpiRow{grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+
+  /* Content padding */
+  .content{padding:12px 10px}
+
   /* Cards */
-  .card{padding:14px}
-  .kpi{padding:13px}
-  .kpi .vl{font-size:18px}
-  /* Modal */
-  .modal{padding:18px;border-radius:12px}
-  .mTitle{font-size:15px}
+  .card{padding:12px}
+  .kpi{padding:12px}
+  .kpi .vl{font-size:17px}
+  .kpi .lb{font-size:11px}
+  .kpi .ic{width:30px;height:30px;font-size:14px;margin-bottom:7px}
+
+  /* Modals - slide up from bottom */
+  .ov{padding:0;align-items:flex-end}
+  .modal{
+    border-radius:20px 20px 0 0;
+    padding:20px 16px;
+    width:100%;max-width:100%;
+    max-height:88vh;
+    margin:0;
+  }
+  .mTitle{font-size:15px;margin-bottom:14px}
+  .mFoot{margin-top:14px}
+
   /* Statement modal */
   #stmtModal{padding:0;align-items:flex-end}
-  #stmtModal .modal{border-radius:16px 16px 0 0;max-height:92vh;width:100%;margin:0}
-  /* Table scroll */
+  #stmtModal .modal{border-radius:20px 20px 0 0;max-height:92vh;width:100%;margin:0}
+
+  /* Tables */
   .tw{-webkit-overflow-scrolling:touch}
-  /* KPI grid on mobile */
-  #kpiRow{grid-template-columns:1fr 1fr;gap:10px}
-  /* FAB button */
+  th{padding:8px 10px;font-size:10px}
+  td{padding:9px 10px;font-size:12px}
+
+  /* FAB */
   #fab-add{display:flex}
+
+  /* Login screen mobile */
+  #loginWrap{padding:12px}
+  .loginBox{max-width:100%}
+  .loginLogo{margin-bottom:20px}
+  .loginLogo .icon{font-size:44px}
+  .loginLogo h1{font-size:24px}
+  .loginCard{padding:20px 16px}
+  .loginBtn{padding:13px;font-size:15px;border-radius:12px}
+  .fld input{padding:12px 14px;font-size:15px}
+  .tabBtn{padding:10px;font-size:13px}
 }
 @media(min-width:769px){#fab-add{display:none}}
 /* FAB floating button for mobile */
@@ -296,21 +351,21 @@ body.dark .bg-g{background:#064e3b;color:#6ee7b7}.dark .bg-r{background:#450a0a;
 <!-- MAIN -->
 <div class="main">
   <div class="topbar">
-    <div class="topLeft">
-      <button class="btn btn-p btn-sm" onclick="initTxModal();openM('txModal')" id="btn-add">+ إضافة عملية</button>
-      <button class="btn btn-o btn-sm" onclick="toggleDark()" id="btn-dark">🌙</button>
-      <button class="btn btn-o btn-sm" onclick="setLang(S.lang==='ar'?'en':'ar')" id="btn-lang-top">EN</button>
-      <span class="syncBadge" id="syncBadge">⚡ <span id="syncTxt">جاري الاتصال...</span></span>
-      <div style="width:1px;height:24px;background:var(--bd);margin:0 4px"></div>
-      <div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="openMyDash()">
-        <div id="uAvatarTop" style="width:30px;height:30px;border-radius:50%;background:var(--pr);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0">?</div>
-        <div style="display:none" id="uNameTopWrap">
-          <div id="uNameTop" style="font-size:13px;font-weight:600;color:var(--tx);white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis">—</div>
-        </div>
-        <button onclick="event.stopPropagation();logout()" title="خروج" style="background:none;border:none;color:var(--mu);cursor:pointer;font-size:15px;padding:2px">⏻</button>
-      </div>
-    </div>
     <div class="topTitle" id="pageTitle">لوحة التحكم</div>
+    <div class="topLeft">
+      <span class="syncBadge" id="syncBadge">⚡ <span id="syncTxt">جاري الاتصال...</span></span>
+      <button class="btn btn-o btn-sm" onclick="setLang(S.lang==='ar'?'en':'ar')" id="btn-lang-top">EN</button>
+      <button class="btn btn-o btn-sm" onclick="toggleDark()" id="btn-dark">🌙</button>
+      <div style="display:flex;align-items:center;gap:6px;cursor:pointer" onclick="openMyDash()">
+        <div id="uAvatarTop" style="width:28px;height:28px;border-radius:50%;background:var(--pr);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">?</div>
+        <div style="display:none" id="uNameTopWrap">
+          <div id="uNameTop" style="font-size:13px;font-weight:600;color:var(--tx);white-space:nowrap;max-width:100px;overflow:hidden;text-overflow:ellipsis">—</div>
+        </div>
+        <button onclick="event.stopPropagation();logout()" title="خروج" style="background:none;border:none;color:var(--mu);cursor:pointer;font-size:14px;padding:2px">⏻</button>
+      </div>
+      <div style="width:1px;height:22px;background:var(--bd)"></div>
+      <button class="btn btn-p btn-sm" onclick="initTxModal();openM('txModal')" id="btn-add">+ إضافة عملية</button>
+    </div>
   </div>
 
   <!-- DASHBOARD -->
