@@ -722,8 +722,16 @@ function logout(){
 
 // ── ACTIVITY ─────────────────────────────────────
 function logAct(type,desc,icon){
-  if(!actRef||!CU||!window._fb)return;
-  window._fb.push(actRef,{uid:CU.uid,name:CU.name,type:type,desc:desc,icon:icon||'📝',time:Date.now()});
+  if(!CU)return;
+  var entry={uid:CU.uid,name:CU.name,type:type,desc:desc,icon:icon||'📝',time:Date.now()};
+  // Store locally
+  if(!S.activityLog)S.activityLog=[];
+  S.activityLog.unshift(entry);
+  if(S.activityLog.length>100)S.activityLog=S.activityLog.slice(0,100);
+  // Also push to Firebase activity ref if available
+  if(window._fb&&actRef){
+    window._fb.push(actRef,entry);
+  }
 }
 
 function timeAgo(ts){
@@ -737,30 +745,41 @@ function openActivity(){
   var list=document.getElementById('actList');
   list.innerHTML='<div class="empty"><div class="ei">⏳</div>جاري التحميل...</div>';
   openM('actModal');
+  // Use activity stored in S (synced from Firebase)
+  var acts=S.activityLog||[];
+  if(acts.length){
+    renderActList(acts,list);
+    return;
+  }
+  // Try Firebase directly
   if(!window._fb||!actRef){
-    list.innerHTML='<div class="empty"><div class="ei">❌</div>لم يتم الاتصال بعد — أغلق وافتح مرة أخرى</div>';
+    list.innerHTML='<div class="empty"><div class="ei">📋</div>لا يوجد نشاط بعد — أضف حسابات وعمليات لتظهر هنا</div>';
     return;
   }
   window._fb.onValue(actRef,function(snap){
     var acts=[];
     snap.forEach(function(c){acts.unshift(c.val());});
-    if(!acts.length){
-      list.innerHTML='<div class="empty"><div class="ei">📋</div>لا يوجد نشاط بعد</div>';
-    } else {
-      list.innerHTML=acts.slice(0,60).map(function(a){
-        if(!a)return'';
-        return '<div class="actItem">'+
-          '<div class="actIcon">'+(a.icon||'📝')+'</div>'+
-          '<div style="flex:1">'+
-            '<div style="font-size:13px;font-weight:500">'+(a.desc||'')+'</div>'+
-            '<div style="font-size:11px;color:var(--mu);margin-top:2px">'+
-              '👤 '+(a.name||'—')+' &nbsp;·&nbsp; '+timeAgo(a.time||0)+
-            '</div>'+
-          '</div>'+
-        '</div>';
-      }).join('');
-    }
+    renderActList(acts,list);
   },{onlyOnce:true});
+}
+
+function renderActList(acts,list){
+  if(!acts||!acts.length){
+    list.innerHTML='<div class="empty"><div class="ei">📋</div>لا يوجد نشاط بعد — أضف حسابات وعمليات لتظهر هنا</div>';
+    return;
+  }
+  list.innerHTML=acts.slice(0,60).map(function(a){
+    if(!a)return'';
+    return '<div class="actItem">'+
+      '<div class="actIcon">'+(a.icon||'📝')+'</div>'+
+      '<div style="flex:1">'+
+        '<div style="font-size:13px;font-weight:500">'+(a.desc||'')+'</div>'+
+        '<div style="font-size:11px;color:var(--mu);margin-top:2px">'+
+          '👤 '+(a.name||'—')+' &nbsp;·&nbsp; '+timeAgo(a.time||0)+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
 }
 
 function openMyDash(){
@@ -818,6 +837,7 @@ function initFB(){
         if(r.budgets)S.budgets=r.budgets;
         if(r.goals)S.goals=r.goals;
         if(r.notifications)S.notifications=r.notifications;
+        if(r.activityLog)S.activityLog=r.activityLog;
         Object.assign(S,keep);
         saveLocal();refreshAll();fillRateInputs();
       }
@@ -831,7 +851,8 @@ function pushFB(){
   if(!dbRef||!window._fb)return;
   syncing=true;setSyncStatus('sync');
   window._fb.set(dbRef,{accounts:S.accounts,transactions:S.transactions,rates:S.rates,
-    budgets:S.budgets||[],goals:S.goals||[],notifications:S.notifications||[]})
+    budgets:S.budgets||[],goals:S.goals||[],notifications:S.notifications||[],
+    activityLog:S.activityLog||[]})
     .then(function(){setSyncStatus('ok');})
     .catch(function(){setSyncStatus('err');})
     .finally(function(){syncing=false;});
