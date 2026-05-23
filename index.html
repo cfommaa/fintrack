@@ -234,7 +234,6 @@ body.dark .bg-g{background:#064e3b;color:#6ee7b7}.dark .bg-r{background:#450a0a;
         <div class="userName" id="uName">—</div>
         <div class="userEmail" id="uEmail">—</div>
       </div>
-      <button onclick="event.stopPropagation();logout()" title="خروج" style="background:none;border:none;color:#475569;cursor:pointer;font-size:16px">⏻</button>
     </div>
     <div style="display:flex;gap:6px">
       <button class="miniBtn" onclick="openActivity()" id="btn-actlog">📋 النشاط</button>
@@ -255,6 +254,14 @@ body.dark .bg-g{background:#064e3b;color:#6ee7b7}.dark .bg-r{background:#450a0a;
       <button class="btn btn-o btn-sm" onclick="toggleDark()" id="btn-dark">🌙</button>
       <button class="btn btn-o btn-sm" onclick="setLang(S.lang==='ar'?'en':'ar')" id="btn-lang-top">EN</button>
       <span class="syncBadge" id="syncBadge">⚡ <span id="syncTxt">جاري الاتصال...</span></span>
+      <div style="width:1px;height:24px;background:var(--bd);margin:0 4px"></div>
+      <div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="openMyDash()">
+        <div id="uAvatarTop" style="width:30px;height:30px;border-radius:50%;background:var(--pr);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0">?</div>
+        <div style="display:none" id="uNameTopWrap">
+          <div id="uNameTop" style="font-size:13px;font-weight:600;color:var(--tx);white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis">—</div>
+        </div>
+        <button onclick="event.stopPropagation();logout()" title="خروج" style="background:none;border:none;color:var(--mu);cursor:pointer;font-size:15px;padding:2px">⏻</button>
+      </div>
     </div>
     <div class="topTitle" id="pageTitle">لوحة التحكم</div>
   </div>
@@ -741,6 +748,11 @@ function onLogin(user){
   document.getElementById('uAvatar').textContent=CU.initials;
   document.getElementById('uName').textContent=CU.name;
   document.getElementById('uEmail').textContent=CU.email;
+  document.getElementById('uAvatarTop').textContent=CU.initials;
+  var nw=document.getElementById('uNameTopWrap');
+  if(nw)nw.style.display='block';
+  var nt=document.getElementById('uNameTop');
+  if(nt)nt.textContent=CU.name;
   document.getElementById('loginWrap').style.display='none';
   if(window._fb&&db)window._fb.set(window._fb.ref(db,'users/'+user.uid+'/lastSeen'),Date.now());
   logAct('login','تسجيل دخول','✅');
@@ -755,6 +767,9 @@ function onLogout(){
   document.getElementById('uAvatar').textContent='?';
   document.getElementById('uName').textContent='—';
   document.getElementById('uEmail').textContent='—';
+  document.getElementById('uAvatarTop').textContent='?';
+  var nw=document.getElementById('uNameTopWrap');
+  if(nw)nw.style.display='none';
 }
 
 function logout(){
