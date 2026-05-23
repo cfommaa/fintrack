@@ -66,7 +66,7 @@ body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:v
 .sidebar{width:220px;min-height:100vh;background:var(--sb);color:var(--sbt);display:flex;flex-direction:column;position:fixed;top:0;right:0;bottom:0;z-index:100}
 .sLogo{padding:18px 20px;font-size:17px;font-weight:700;color:#fff;border-bottom:1px solid rgba(255,255,255,.1)}
 .sLogo span{color:#60a5fa}
-.sNav{flex:1;overflow-y:auto;padding:6px 0}
+.sNav{flex:1;overflow-y:auto;padding:6px 0;scrollbar-width:none}.sNav::-webkit-scrollbar{display:none}
 .sSection{font-size:10px;text-transform:uppercase;padding:14px 20px 4px;opacity:.45;letter-spacing:1px}
 .nav{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;font-size:13px;color:var(--sbt);transition:background .15s}
 .nav:hover{background:rgba(255,255,255,.08)}
@@ -227,22 +227,14 @@ body.dark .bg-g{background:#064e3b;color:#6ee7b7}.dark .bg-r{background:#450a0a;
     <div class="nav" onclick="go('users')" id="nav-users"><span>👥</span><span id="lbl-users">المستخدمين</span></div>
     <div class="nav" onclick="go('set')" id="nav-set"><span>⚙️</span><span id="lbl-set">الإعدادات</span></div>
   </div>
-  <div class="sUser">
-    <div class="userRow" onclick="openMyDash()">
-      <div class="avatar" id="uAvatar">?</div>
-      <div style="flex:1;overflow:hidden">
-        <div class="userName" id="uName">—</div>
-        <div class="userEmail" id="uEmail">—</div>
-      </div>
-    </div>
-    <div style="display:flex;gap:6px">
-      <button class="miniBtn" onclick="openActivity()" id="btn-actlog">📋 النشاط</button>
-      <button class="miniBtn" onclick="openMyDash()" id="btn-me">👤 لوحتي</button>
-    </div>
-  </div>
-  <div class="langRow">
-    <button class="lBtn on" onclick="setLang('ar')" id="btn-ar">العربية</button>
-    <button class="lBtn" onclick="setLang('en')" id="btn-en">English</button>
+  <div style="display:none">
+    <div id="uAvatar"></div>
+    <div id="uName"></div>
+    <div id="uEmail"></div>
+    <button id="btn-actlog"></button>
+    <button id="btn-me"></button>
+    <button id="btn-ar"></button>
+    <button id="btn-en"></button>
   </div>
 </div>
 
