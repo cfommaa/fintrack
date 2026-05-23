@@ -739,9 +739,10 @@ function openActivity(){
   openM('actModal');
   // Use onValue once for activity
   var fb=window._fb;if(!fb||!actRef){list.innerHTML='<div class="empty"><div class="ei">❌</div>خطأ في الاتصال</div>';return;}
-  fb.onValue(actRef,function(snap){
+  var unsubAct=fb.onValue(actRef,function(snap){
     var acts=[];
     snap.forEach(function(c){acts.unshift(c.val());});
+    if(unsubAct)unsubAct(); // unsubscribe after first load
     if(!acts.length){list.innerHTML='<div class="empty"><div class="ei">📋</div>لا يوجد نشاط</div>';return;}
     list.innerHTML=acts.slice(0,50).map(function(a){
       return '<div class="actItem"><div class="actIcon">'+(a.icon||'📝')+'</div>'+
@@ -1662,9 +1663,13 @@ function renderUsers(){
   if(!CU){el.innerHTML='<div class="empty"><div class="ei">🔒</div>سجل الدخول أولاً</div>';return;}
   // Check if admin
   if(!window._fb){el.innerHTML='<div class="empty"><div class="ei">❌</div>خطأ في الاتصال</div>';return;}
-  window._fb.onValue(window._fb.ref(db,'users'),function(snap){
+  var unsubUsers=window._fb.onValue(window._fb.ref(db,'users'),function(snap){
     var users=[];
-    snap.forEach(function(c){users.push({...c.val(),uid:c.key});});
+    snap.forEach(function(c){
+      var u=c.val();
+      u.uid=c.key;
+      users.push(u);
+    });
     var me=users.find(function(u){return u.uid===CU.uid;});
     var isAdmin=me&&me.role==='admin';
     if(warn)warn.style.display=isAdmin?'none':'block';
@@ -1672,6 +1677,7 @@ function renderUsers(){
       el.innerHTML='<div class="empty"><div class="ei">🔒</div>هذه الصفحة للمدير فقط</div>';
       return;
     }
+    if(unsubUsers)unsubUsers();
     if(!users.length){el.innerHTML='<div class="empty"><div class="ei">👥</div>لا يوجد مستخدمون</div>';return;}
     el.innerHTML='<div class="card" style="padding:0;overflow:hidden"><div class="tw"><table><thead><tr>'+
       '<th>المستخدم</th><th>البريد</th><th>الدور</th><th>آخر دخول</th><th>إجراء</th>'+
@@ -1711,10 +1717,13 @@ function toggleRole(uid,currentRole){
 function setFirstUserAdmin(uid){
   if(window._fb&&db){
     var uRef=window._fb.ref(db,'users');
-    window._fb.onValue(uRef,function(snap){
+    var unsubFirst=window._fb.onValue(uRef,function(snap){
+      if(unsubFirst)unsubFirst();
       var count=0;snap.forEach(function(){count++;});
-      if(count<=1){window._fb.set(window._fb.ref(db,'users/'+uid+'/role'),'admin');}
-    },{onlyOnce:true});
+      if(count<=1){
+        window._fb.set(window._fb.ref(db,'users/'+uid+'/role'),'admin');
+      }
+    });
   }
 }
 
