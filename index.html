@@ -85,6 +85,7 @@ body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:v
 .main{margin-right:220px;flex:1;display:flex;flex-direction:column;min-height:100vh}
 .topbar{background:var(--card);border-bottom:1px solid var(--bd);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;position:sticky;top:0;z-index:50}
 .topTitle{font-size:16px;font-weight:600}
+.topLeft{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .topRight{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .syncBadge{font-size:11px;padding:3px 10px;border-radius:20px;background:var(--bg);border:1px solid var(--bd);color:var(--mu)}
 .content{padding:20px;flex:1}
@@ -249,13 +250,13 @@ body.dark .bg-g{background:#064e3b;color:#6ee7b7}.dark .bg-r{background:#450a0a;
 <!-- MAIN -->
 <div class="main">
   <div class="topbar">
-    <div class="topTitle" id="pageTitle">لوحة التحكم</div>
-    <div class="topRight">
-      <span class="syncBadge" id="syncBadge">⚡ <span id="syncTxt">جاري الاتصال...</span></span>
-      <button class="btn btn-o btn-sm" onclick="setLang(S.lang==='ar'?'en':'ar')" id="btn-lang-top">EN</button>
-      <button class="btn btn-o btn-sm" onclick="toggleDark()" id="btn-dark">🌙</button>
+    <div class="topLeft">
       <button class="btn btn-p btn-sm" onclick="openM('txModal')" id="btn-add">+ إضافة عملية</button>
+      <button class="btn btn-o btn-sm" onclick="toggleDark()" id="btn-dark">🌙</button>
+      <button class="btn btn-o btn-sm" onclick="setLang(S.lang==='ar'?'en':'ar')" id="btn-lang-top">EN</button>
+      <span class="syncBadge" id="syncBadge">⚡ <span id="syncTxt">جاري الاتصال...</span></span>
     </div>
+    <div class="topTitle" id="pageTitle">لوحة التحكم</div>
   </div>
 
   <!-- DASHBOARD -->
