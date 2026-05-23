@@ -737,26 +737,32 @@ function openActivity(){
   var list=document.getElementById('actList');
   list.innerHTML='<div class="empty"><div class="ei">⏳</div>جاري التحميل...</div>';
   openM('actModal');
-  // Use onValue once for activity
-  var fb=window._fb;if(!fb||!actRef){list.innerHTML='<div class="empty"><div class="ei">❌</div>خطأ في الاتصال</div>';return;}
-  // Get activity data once
-  fb.onValue(actRef, function(snap){
+  if(!window._fb||!actRef){
+    list.innerHTML='<div class="empty"><div class="ei">❌</div>لم يتم الاتصال بعد — أغلق وافتح مرة أخرى</div>';
+    return;
+  }
+  window._fb.onValue(actRef,function(snap){
     var acts=[];
-    snap.forEach(function(c){ acts.unshift(c.val()); });
+    snap.forEach(function(c){acts.unshift(c.val());});
     if(!acts.length){
       list.innerHTML='<div class="empty"><div class="ei">📋</div>لا يوجد نشاط بعد</div>';
     } else {
-      list.innerHTML=acts.slice(0,50).map(function(a){
-        return '<div class="actItem"><div class="actIcon">'+(a.icon||'📝')+'</div>'+
-          '<div style="flex:1"><div style="font-size:13.5px;font-weight:500">'+(a.desc||'')+'</div>'+
-          '<div style="font-size:12px;color:var(--mu);margin-top:2px">👤 '+(a.name||'—')+' · '+timeAgo(a.time||Date.now())+'</div></div>'+
-          '</div>';
+      list.innerHTML=acts.slice(0,60).map(function(a){
+        if(!a)return'';
+        return '<div class="actItem">'+
+          '<div class="actIcon">'+(a.icon||'📝')+'</div>'+
+          '<div style="flex:1">'+
+            '<div style="font-size:13px;font-weight:500">'+(a.desc||'')+'</div>'+
+            '<div style="font-size:11px;color:var(--mu);margin-top:2px">'+
+              '👤 '+(a.name||'—')+' &nbsp;·&nbsp; '+timeAgo(a.time||0)+
+            '</div>'+
+          '</div>'+
+        '</div>';
       }).join('');
     }
-  }, { onlyOnce: true });
+  },{onlyOnce:true});
 }
 
-// ── MY DASHBOARD ─────────────────────────────────
 function openMyDash(){
   if(!CU)return;
   var myTxs=S.transactions.filter(function(t){return t.createdBy===CU.uid;});
@@ -1663,16 +1669,22 @@ function renderUsers(){
   var el=document.getElementById('usersTable');
   var warn=document.getElementById('adminWarn');
   if(!el)return;
-  if(!CU){el.innerHTML='<div class="empty"><div class="ei">🔒</div>سجل الدخول أولاً</div>';return;}
-  // Check if admin
-  if(!window._fb){el.innerHTML='<div class="empty"><div class="ei">❌</div>خطأ في الاتصال</div>';return;}
-  var unsubUsers=window._fb.onValue(window._fb.ref(db,'users'),function(snap){
+  if(!CU){
+    el.innerHTML='<div class="empty"><div class="ei">🔒</div>سجل الدخول أولاً</div>';
+    return;
+  }
+  if(!window._fb||!db){
+    el.innerHTML='<div class="empty"><div class="ei">❌</div>جاري الاتصال... حاول مرة أخرى</div>';
+    return;
+  }
+  el.innerHTML='<div class="empty"><div class="ei">⏳</div>جاري التحميل...</div>';
+  window._fb.onValue(window._fb.ref(db,'users'),function(snap){
     var users=[];
     snap.forEach(function(c){
-      var u=c.val();
+      var u=c.val()||{};
       u.uid=c.key;
       users.push(u);
-    }, {onlyOnce:true});
+    });
     var me=users.find(function(u){return u.uid===CU.uid;});
     var isAdmin=me&&me.role==='admin';
     if(warn)warn.style.display=isAdmin?'none':'block';
@@ -1680,29 +1692,35 @@ function renderUsers(){
       el.innerHTML='<div class="empty"><div class="ei">🔒</div>هذه الصفحة للمدير فقط</div>';
       return;
     }
-    if(unsubUsers)unsubUsers();
-    if(!users.length){el.innerHTML='<div class="empty"><div class="ei">👥</div>لا يوجد مستخدمون بعد — سجّل بعض المستخدمين أولاً</div>';return;}
+    if(!users.length){
+      el.innerHTML='<div class="empty"><div class="ei">👥</div>لا يوجد مستخدمون بعد</div>';
+      return;
+    }
     el.innerHTML='<div class="card" style="padding:0;overflow:hidden"><div class="tw"><table><thead><tr>'+
       '<th>المستخدم</th><th>البريد</th><th>الدور</th><th>آخر دخول</th><th>إجراء</th>'+
       '</tr></thead><tbody>'+
       users.map(function(u){
         var isMe=u.uid===CU.uid;
-        var myTxCount=S.transactions.filter(function(t){return t.createdBy===u.uid;}).length;
+        var txCount=S.transactions.filter(function(t){return t.createdBy===u.uid;}).length;
+        var role=u.role||'user';
+        var initials=((u.name||u.email||'?').substring(0,2)).toUpperCase();
         return '<tr>'+
           '<td><div style="display:flex;align-items:center;gap:8px">'+
-            '<div style="width:32px;height:32px;border-radius:50%;background:var(--pr);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700">'+
-              (u.name||u.email||'?').substring(0,2).toUpperCase()+'</div>'+
-            '<div><div style="font-weight:500">'+( u.name||'—')+(isMe?' (أنت)':'')+'</div>'+
-              '<div style="font-size:11px;color:var(--mu)">'+myTxCount+' عملية</div></div>'+
+            '<div style="width:32px;height:32px;border-radius:50%;background:var(--pr);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700">'+initials+'</div>'+
+            '<div><div style="font-weight:500">'+(u.name||'—')+(isMe?' (أنت)':'')+'</div>'+
+            '<div style="font-size:11px;color:var(--mu)">'+txCount+' عملية</div></div>'+
           '</div></td>'+
-          '<td style="font-size:12px;color:var(--mu);direction:ltr">'+( u.email||'—')+'</td>'+
-          '<td><span style="padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;background:'+(u.role==='admin'?'#ede9fe':'#f1f5f9')+';color:'+(u.role==='admin'?'#5b21b6':'#475569')+'">'+
-            (u.role==='admin'?'👑 مدير':'👤 مستخدم')+'</span></td>'+
-          '<td style="font-size:12px;color:var(--mu)">'+( u.lastSeen?timeAgo(u.lastSeen):'—')+'</td>'+
-          '<td>'+(isMe?'—':'<button class="btn btn-o btn-sm" onclick="toggleRole(\''+u.uid+'\''+',\''+(u.role||'user')+'\')">'+(u.role==='admin'?'تحويل لمستخدم':'ترقية لمدير')+'</button>')+'</td>'+
+          '<td style="font-size:12px;color:var(--mu);direction:ltr">'+(u.email||'—')+'</td>'+
+          '<td><span style="padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;background:'+(role==='admin'?'#ede9fe':'#f1f5f9')+';color:'+(role==='admin'?'#5b21b6':'#475569')+'">'+
+            (role==='admin'?'👑 مدير':'👤 مستخدم')+'</span></td>'+
+          '<td style="font-size:12px;color:var(--mu)">'+(u.lastSeen?timeAgo(u.lastSeen):'—')+'</td>'+
+          '<td>'+(isMe?'<span style="color:var(--mu);font-size:12px">أنت</span>':
+            '<button class="btn btn-o btn-sm" onclick="toggleRole(\''+u.uid+'\',\''+role+'\')">'+
+            (role==='admin'?'تحويل لمستخدم':'ترقية لمدير')+'</button>')+'</td>'+
         '</tr>';
-      }).join('')+'</tbody></table></div></div>';
-  });
+      }).join('')+
+      '</tbody></table></div></div>';
+  },{onlyOnce:true});
 }
 
 function toggleRole(uid,currentRole){
