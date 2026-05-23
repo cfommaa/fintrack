@@ -739,18 +739,21 @@ function openActivity(){
   openM('actModal');
   // Use onValue once for activity
   var fb=window._fb;if(!fb||!actRef){list.innerHTML='<div class="empty"><div class="ei">❌</div>خطأ في الاتصال</div>';return;}
-  var unsubAct=fb.onValue(actRef,function(snap){
+  // Get activity data once
+  fb.onValue(actRef, function(snap){
     var acts=[];
-    snap.forEach(function(c){acts.unshift(c.val());});
-    if(unsubAct)unsubAct(); // unsubscribe after first load
-    if(!acts.length){list.innerHTML='<div class="empty"><div class="ei">📋</div>لا يوجد نشاط</div>';return;}
-    list.innerHTML=acts.slice(0,50).map(function(a){
-      return '<div class="actItem"><div class="actIcon">'+(a.icon||'📝')+'</div>'+
-        '<div style="flex:1"><div style="font-size:13.5px;font-weight:500">'+a.desc+'</div>'+
-        '<div style="font-size:12px;color:var(--mu);margin-top:2px">👤 '+(a.name||'—')+'</div></div>'+
-        '<div style="font-size:11px;color:var(--mu);white-space:nowrap">'+timeAgo(a.time)+'</div></div>';
-    }).join('');
-  });
+    snap.forEach(function(c){ acts.unshift(c.val()); });
+    if(!acts.length){
+      list.innerHTML='<div class="empty"><div class="ei">📋</div>لا يوجد نشاط بعد</div>';
+    } else {
+      list.innerHTML=acts.slice(0,50).map(function(a){
+        return '<div class="actItem"><div class="actIcon">'+(a.icon||'📝')+'</div>'+
+          '<div style="flex:1"><div style="font-size:13.5px;font-weight:500">'+(a.desc||'')+'</div>'+
+          '<div style="font-size:12px;color:var(--mu);margin-top:2px">👤 '+(a.name||'—')+' · '+timeAgo(a.time||Date.now())+'</div></div>'+
+          '</div>';
+      }).join('');
+    }
+  }, { onlyOnce: true });
 }
 
 // ── MY DASHBOARD ─────────────────────────────────
@@ -1669,7 +1672,7 @@ function renderUsers(){
       var u=c.val();
       u.uid=c.key;
       users.push(u);
-    });
+    }, {onlyOnce:true});
     var me=users.find(function(u){return u.uid===CU.uid;});
     var isAdmin=me&&me.role==='admin';
     if(warn)warn.style.display=isAdmin?'none':'block';
@@ -1678,7 +1681,7 @@ function renderUsers(){
       return;
     }
     if(unsubUsers)unsubUsers();
-    if(!users.length){el.innerHTML='<div class="empty"><div class="ei">👥</div>لا يوجد مستخدمون</div>';return;}
+    if(!users.length){el.innerHTML='<div class="empty"><div class="ei">👥</div>لا يوجد مستخدمون بعد — سجّل بعض المستخدمين أولاً</div>';return;}
     el.innerHTML='<div class="card" style="padding:0;overflow:hidden"><div class="tw"><table><thead><tr>'+
       '<th>المستخدم</th><th>البريد</th><th>الدور</th><th>آخر دخول</th><th>إجراء</th>'+
       '</tr></thead><tbody>'+
