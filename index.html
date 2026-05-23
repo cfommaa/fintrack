@@ -161,6 +161,13 @@ body.dark .bg-g{background:#064e3b;color:#6ee7b7}.dark .bg-r{background:#450a0a;
 .infoBox{background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:14px;margin-top:4px}
 .srow{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd);font-size:13.5px}
 .srow:last-child{border-bottom:none;font-weight:700;font-size:15px}
+
+@media print {
+  .sidebar, .topbar, .btn, #stmtMonth, #stmtType, #btn-print { display:none!important; }
+  .ov { position:static!important; background:none!important; display:block!important; }
+  .modal { box-shadow:none!important; max-width:100%!important; border:none!important; }
+  body { direction:rtl; }
+}
 </style>
 </head>
 <body>
@@ -572,6 +579,40 @@ body.dark .bg-g{background:#064e3b;color:#6ee7b7}.dark .bg-r{background:#450a0a;
   </div>
 </div>
 
+<!-- Account Statement Modal -->
+<div class="ov" id="stmtModal" style="align-items:flex-start;padding:20px;overflow-y:auto;">
+  <div class="modal" style="max-width:700px;width:100%;margin:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div class="mTitle" style="margin:0" id="stmtAccName">كشف الحساب</div>
+        <div style="font-size:12px;color:var(--mu);margin-top:3px" id="stmtAccSub"></div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-o btn-sm" onclick="printStatement()" id="btn-print">🖨️ طباعة</button>
+        <button class="btn btn-o btn-sm" onclick="closeM('stmtModal')">✕</button>
+      </div>
+    </div>
+    <!-- Balance summary -->
+    <div id="stmtSummary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;"></div>
+    <!-- Currencies row -->
+    <div id="stmtCurrencies" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;padding:12px;background:var(--bg);border-radius:10px;"></div>
+    <!-- Filter -->
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+      <input type="month" class="fc" id="stmtMonth" style="width:160px" oninput="renderStatement()">
+      <select class="fc" id="stmtType" style="width:140px" onchange="renderStatement()">
+        <option value="">جميع العمليات</option>
+        <option value="deposit">إيداع فقط</option>
+        <option value="withdrawal">صرف فقط</option>
+      </select>
+      <button class="btn btn-o btn-sm" onclick="document.getElementById('stmtMonth').value='';document.getElementById('stmtType').value='';renderStatement()">مسح</button>
+    </div>
+    <!-- Transactions table -->
+    <div class="tw" id="stmtTable"></div>
+    <!-- Footer totals -->
+    <div id="stmtFooter" style="margin-top:14px;padding:14px;background:var(--bg);border-radius:10px;"></div>
+  </div>
+</div>
+
 <div class="notif" id="notif"></div>
 
 <script>
@@ -948,6 +989,7 @@ function renderAccounts(){
           (a.createdByName?'<div style="font-size:10px;color:var(--mu);margin-top:2px">أنشأه: '+a.createdByName+'</div>':'')+
         '</div>'+
         '<div style="display:flex;gap:5px">'+
+          '<button class="btn btn-o btn-sm btn-sm" onclick="openStatement(\''+a.id+'\')">📄 كشف</button>'+
           '<button class="btn btn-o btn-ic btn-sm" onclick="openEditAcc(\''+a.id+'\')">✏️</button>'+
           '<button class="btn btn-o btn-ic btn-sm" onclick="delAcc(\''+a.id+'\')">🗑️</button>'+
         '</div>'+
@@ -1168,13 +1210,16 @@ function renderDash(){
   if(!S.accounts.length){al.innerHTML='<div class="empty"><div class="ei">🏦</div>لا توجد حسابات</div>';}
   else al.innerHTML=S.accounts.map(function(a){
     var p=total>0?Math.min(100,a.sarBalance/total*100):0;
-    return '<div style="margin-bottom:14px">'+
+    return '<div style="margin-bottom:14px;cursor:pointer;padding:8px;border-radius:8px;transition:background .15s" onclick="openStatement(\"'+a.id+'\")">'+
       '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px">'+
-        '<span style="font-weight:500">'+a.name+'</span>'+
-        '<span style="color:'+a.color+';font-weight:600">'+fmtC(a.balance,a.mainCurrency)+'</span>'+
+        '<span style="font-weight:600;color:'+a.color+'">'+a.name+'</span>'+
+        '<span style="font-weight:700">'+fmtC(a.balance,a.mainCurrency)+'</span>'+
       '</div>'+
       '<div class="pbar"><div class="pfill" style="width:'+p.toFixed(1)+'%;background:'+a.color+'"></div></div>'+
-      '<div style="font-size:11px;color:var(--mu);margin-top:2px">'+p.toFixed(1)+'% '+(S.lang==='ar'?'من الإجمالي':'of total')+'</div>'+
+      '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--mu);margin-top:3px">'+
+        '<span>'+p.toFixed(1)+'% '+(S.lang==='ar'?'من الإجمالي':'of total')+'</span>'+
+        '<span style="color:'+a.color+'">اضغط للكشف ←</span>'+
+      '</div>'+
     '</div>';
   }).join('');
 
@@ -1770,6 +1815,124 @@ function setFirstUserAdmin(uid){
 }
 
 // ── NAVIGATION UPDATE ──────────────────────────────
+// ── ACCOUNT STATEMENT ────────────────────────────
+var stmtAccId = null;
+
+function openStatement(accId){
+  var acc = S.accounts.find(function(a){return a.id===accId;});
+  if(!acc) return;
+  stmtAccId = accId;
+  document.getElementById('stmtAccName').textContent = acc.name;
+  document.getElementById('stmtAccSub').textContent = (acc.owner?acc.owner+' · ':'')+acc.currencies.join(', ');
+  document.getElementById('stmtMonth').value = '';
+  document.getElementById('stmtType').value = '';
+  renderStatement();
+  openM('stmtModal');
+}
+
+function renderStatement(){
+  var acc = S.accounts.find(function(a){return a.id===stmtAccId;});
+  if(!acc) return;
+
+  var monthF = document.getElementById('stmtMonth').value;
+  var typeF  = document.getElementById('stmtType').value;
+
+  var txs = S.transactions.filter(function(t){
+    return t.accountId === stmtAccId &&
+      (!monthF || t.date.startsWith(monthF)) &&
+      (!typeF  || t.type === typeF);
+  });
+
+  // Summary cards
+  var totalDeps = txs.filter(function(t){return t.type==='deposit';}).reduce(function(s,t){return s+t.sarAmount;},0);
+  var totalWths = txs.filter(function(t){return t.type==='withdrawal';}).reduce(function(s,t){return s+t.sarAmount;},0);
+  document.getElementById('stmtSummary').innerHTML =
+    '<div style="background:linear-gradient(135deg,var(--pr),#3b82f6);border-radius:10px;padding:14px;color:#fff;">'+
+      '<div style="font-size:11px;opacity:.85;margin-bottom:4px">الرصيد الحالي</div>'+
+      '<div style="font-size:20px;font-weight:700">'+fmtC(acc.balance,acc.mainCurrency)+'</div>'+
+      '<div style="font-size:11px;opacity:.75;margin-top:2px">'+fmtC(acc.sarBalance,'SAR')+'</div>'+
+    '</div>'+
+    '<div style="background:linear-gradient(135deg,#059669,#10b981);border-radius:10px;padding:14px;color:#fff;">'+
+      '<div style="font-size:11px;opacity:.85;margin-bottom:4px">إجمالي الإيداعات</div>'+
+      '<div style="font-size:20px;font-weight:700">'+fmtC(frSAR(totalDeps,acc.mainCurrency),acc.mainCurrency)+'</div>'+
+      '<div style="font-size:11px;opacity:.75;margin-top:2px">'+txs.filter(function(t){return t.type==='deposit';}).length+' عملية</div>'+
+    '</div>'+
+    '<div style="background:linear-gradient(135deg,#dc2626,#ef4444);border-radius:10px;padding:14px;color:#fff;">'+
+      '<div style="font-size:11px;opacity:.85;margin-bottom:4px">إجمالي الصرف</div>'+
+      '<div style="font-size:20px;font-weight:700">'+fmtC(frSAR(totalWths,acc.mainCurrency),acc.mainCurrency)+'</div>'+
+      '<div style="font-size:11px;opacity:.75;margin-top:2px">'+txs.filter(function(t){return t.type==='withdrawal';}).length+' عملية</div>'+
+    '</div>';
+
+  // All currencies balance
+  document.getElementById('stmtCurrencies').innerHTML =
+    '<div style="font-size:12px;color:var(--mu);width:100%;margin-bottom:4px">الرصيد بجميع العملات:</div>'+
+    acc.currencies.map(function(c){
+      return '<div style="background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:8px 14px;text-align:center;">'+
+        '<div style="font-size:11px;color:var(--mu);margin-bottom:2px">'+c+'</div>'+
+        '<div style="font-size:15px;font-weight:700;color:var(--pr)">'+fmtC(frSAR(acc.sarBalance,c),c)+'</div>'+
+      '</div>';
+    }).join('');
+
+  // Transactions table
+  var tbl = document.getElementById('stmtTable');
+  if(!txs.length){
+    tbl.innerHTML='<div class="empty"><div class="ei">💸</div>لا توجد عمليات</div>';
+    document.getElementById('stmtFooter').innerHTML='';
+    return;
+  }
+
+  // Sort by date ascending for running balance
+  var sorted = txs.slice().sort(function(a,b){return a.date.localeCompare(b.date)||(a.createdAt||0)-(b.createdAt||0);});
+
+  tbl.innerHTML = '<table style="width:100%;border-collapse:collapse;min-width:500px">'+
+    '<thead><tr style="background:var(--bg);">'+
+      '<th style="padding:10px 12px;text-align:right;font-size:11px;color:var(--mu);border-bottom:2px solid var(--bd)">#</th>'+
+      '<th style="padding:10px 12px;text-align:right;font-size:11px;color:var(--mu);border-bottom:2px solid var(--bd)">التاريخ</th>'+
+      '<th style="padding:10px 12px;text-align:right;font-size:11px;color:var(--mu);border-bottom:2px solid var(--bd)">النوع</th>'+
+      '<th style="padding:10px 12px;text-align:right;font-size:11px;color:var(--mu);border-bottom:2px solid var(--bd)">المبلغ</th>'+
+      '<th style="padding:10px 12px;text-align:right;font-size:11px;color:var(--mu);border-bottom:2px solid var(--bd)">الرصيد بعد</th>'+
+      '<th style="padding:10px 12px;text-align:right;font-size:11px;color:var(--mu);border-bottom:2px solid var(--bd)">بواسطة</th>'+
+      '<th style="padding:10px 12px;text-align:right;font-size:11px;color:var(--mu);border-bottom:2px solid var(--bd)">ملاحظة</th>'+
+    '</tr></thead><tbody>'+
+    sorted.map(function(tx,i){
+      var isD = tx.type==='deposit';
+      // Running balance in account main currency
+      var runBal = fmtC(frSAR(tx.sarBalanceAfter, acc.mainCurrency), acc.mainCurrency);
+      // All currencies
+      var allBals = acc.currencies.map(function(c){
+        return c+': '+fmtC(frSAR(tx.sarBalanceAfter,c),c);
+      }).join(' | ');
+      return '<tr style="border-bottom:1px solid var(--bd)">'+
+        '<td style="padding:10px 12px;font-size:12px;color:var(--mu);">'+(i+1)+'</td>'+
+        '<td style="padding:10px 12px;font-size:13px;white-space:nowrap;">'+tx.date+'</td>'+
+        '<td style="padding:10px 12px;"><span class="badge '+(isD?'bg-g':'bg-r')+'">'+(isD?'إيداع':'صرف')+'</span></td>'+
+        '<td style="padding:10px 12px;font-weight:700;white-space:nowrap;color:'+(isD?'var(--su)':'var(--da)')+'">'+
+          (isD?'+':'-')+fmtC(tx.amount,tx.currency)+'</td>'+
+        '<td style="padding:10px 12px;">'+
+          '<div style="font-size:13px;font-weight:600;">'+runBal+'</div>'+
+          '<div style="font-size:10px;color:var(--mu);">'+allBals+'</div>'+
+        '</td>'+
+        '<td style="padding:10px 12px;font-size:12px;color:var(--mu);">'+(tx.createdByName?'👤 '+tx.createdByName:'—')+'</td>'+
+        '<td style="padding:10px 12px;font-size:12px;color:var(--mu);">'+(tx.note||'—')+'</td>'+
+      '</tr>';
+    }).join('')+
+    '</tbody></table>';
+
+  // Footer
+  var net = totalDeps - totalWths;
+  document.getElementById('stmtFooter').innerHTML =
+    '<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;font-size:13px;">'+
+      '<div><span style="color:var(--mu)">عدد العمليات: </span><strong>'+txs.length+'</strong></div>'+
+      '<div><span style="color:var(--mu)">إجمالي الإيداعات: </span><strong class="dep">+'+fmtC(frSAR(totalDeps,acc.mainCurrency),acc.mainCurrency)+'</strong></div>'+
+      '<div><span style="color:var(--mu)">إجمالي الصرف: </span><strong class="wth">-'+fmtC(frSAR(totalWths,acc.mainCurrency),acc.mainCurrency)+'</strong></div>'+
+      '<div><span style="color:var(--mu)">الصافي: </span><strong style="color:'+(net>=0?'var(--su)':'var(--da)')+'">'+fmtC(frSAR(net,acc.mainCurrency),acc.mainCurrency)+'</strong></div>'+
+    '</div>';
+}
+
+function printStatement(){
+  window.print();
+}
+
 // ── INIT ─────────────────────────────────────────────
 loadLocal();
 document.body.classList.toggle('dark',S.dark);
