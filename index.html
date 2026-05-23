@@ -858,9 +858,29 @@ function onLogin(user){
   if(nt)nt.textContent=CU.name;
   document.getElementById('loginWrap').style.display='none';
   if(window._fb&&db)window._fb.set(window._fb.ref(db,'users/'+user.uid+'/lastSeen'),Date.now());
-  logAct('login','تسجيل دخول','✅');
   setFirstUserAdmin(user.uid);
   updateNotifBadge();
+  // Force refresh data from Firebase after login
+  setTimeout(function(){
+    if(window._fb&&dbRef){
+      window._fb.onValue(dbRef,function(snap){
+        var r=snap.val();
+        if(r){
+          var keep={lang:S.lang,dark:S.dark,primaryColor:S.primaryColor,sidebarColor:S.sidebarColor};
+          if(r.accounts&&r.accounts.length)S.accounts=r.accounts;
+          if(r.transactions&&r.transactions.length)S.transactions=r.transactions;
+          if(r.rates)S.rates=r.rates;
+          if(r.budgets)S.budgets=r.budgets;
+          if(r.goals)S.goals=r.goals;
+          if(r.notifications)S.notifications=r.notifications;
+          if(r.activityLog)S.activityLog=r.activityLog;
+          Object.assign(S,keep);
+          saveLocal();refreshAll();fillRateInputs();
+        }
+      },{onlyOnce:true});
+    }
+  },500);
+  logAct('login','تسجيل دخول','✅');
   notify('مرحباً '+CU.name+' 👋');
 }
 
@@ -989,35 +1009,46 @@ function initFB(){
     });
 
     fb.onValue(dbRef,function(snap){
-      if(syncing)return;
       var r=snap.val();
       if(r){
         var keep={lang:S.lang,dark:S.dark,primaryColor:S.primaryColor,sidebarColor:S.sidebarColor};
-        if(r.accounts)S.accounts=r.accounts;
-        if(r.transactions)S.transactions=r.transactions;
+        if(r.accounts&&r.accounts.length)S.accounts=r.accounts;
+        if(r.transactions&&r.transactions.length)S.transactions=r.transactions;
         if(r.rates)S.rates=r.rates;
         if(r.budgets)S.budgets=r.budgets;
         if(r.goals)S.goals=r.goals;
         if(r.notifications)S.notifications=r.notifications;
         if(r.activityLog)S.activityLog=r.activityLog;
         Object.assign(S,keep);
-        saveLocal();refreshAll();fillRateInputs();
+        saveLocal();
+        if(!syncing){refreshAll();fillRateInputs();}
       }
       setSyncStatus('ok');
-    },function(){setSyncStatus('err');});
+      syncing=false;
+    },function(){setSyncStatus('err');syncing=false;});
 
   }catch(e){setSyncStatus('err');console.error('FB:',e);}
 }
 
 function pushFB(){
   if(!dbRef||!window._fb)return;
-  syncing=true;setSyncStatus('sync');
-  window._fb.set(dbRef,{accounts:S.accounts,transactions:S.transactions,rates:S.rates,
-    budgets:S.budgets||[],goals:S.goals||[],notifications:S.notifications||[],
-    activityLog:S.activityLog||[]})
+  setSyncStatus('sync');
+  var data={
+    accounts:S.accounts||[],
+    transactions:S.transactions||[],
+    rates:S.rates,
+    budgets:S.budgets||[],
+    goals:S.goals||[],
+    notifications:S.notifications||[],
+    activityLog:S.activityLog||[]
+  };
+  syncing=true;
+  window._fb.set(dbRef,data)
     .then(function(){setSyncStatus('ok');})
-    .catch(function(){setSyncStatus('err');})
-    .finally(function(){syncing=false;});
+    .catch(function(e){setSyncStatus('err');console.warn('pushFB error:',e);})
+    .finally(function(){
+      setTimeout(function(){syncing=false;},1000);
+    });
 }
 
 // ── MODAL ────────────────────────────────────────
