@@ -4,9 +4,32 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FinTrack Cloud</title>
-<script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-app.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-database.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-auth.js"></script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, set, onValue, push } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+  const fbCfg = {
+    apiKey: "AIzaSyDAbWoJoIobem3j2uHUQd6tsqscXOIk-uc",
+    authDomain: "fintrack-c43ad.firebaseapp.com",
+    databaseURL: "https://fintrack-c43ad-default-rtdb.firebaseio.com",
+    projectId: "fintrack-c43ad",
+    storageBucket: "fintrack-c43ad.firebasestorage.app",
+    messagingSenderId: "837454584758",
+    appId: "1:837454584758:web:28496b5acf5277c7503f17"
+  };
+
+  const app = initializeApp(fbCfg);
+  const db = getDatabase(app);
+  const auth = getAuth(app);
+
+  // Expose to global scope
+  window._fb = { db, auth, ref, set, onValue, push,
+    createUserWithEmailAndPassword, signInWithEmailAndPassword,
+    signOut, onAuthStateChanged, updateProfile };
+
+  window.dispatchEvent(new Event('fbReady'));
+</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -637,20 +660,21 @@ function auth(){
   var name=document.getElementById('iName').value.trim();
   var btn=document.getElementById('authBtn');
   if(!email||!pass){showErr('أدخل البريد وكلمة المرور');return;}
-  if(typeof firebase==='undefined'||!db){
-    showErr('جاري تحميل البرنامج... انتظر ثم حاول مرة أخرى');
-    tryInitFB();
+  if(!window._fb||!db){
+    showErr('جاري تحميل البرنامج... انتظر 3 ثوانٍ وحاول مرة أخرى');
     return;
   }
   btn.disabled=true;btn.textContent='جاري...';
   document.getElementById('loginErr').style.display='none';
+  var fb=window._fb;
+  if(!fb){showErr('جاري التحميل... انتظر ثانية وحاول مرة أخرى');btn.disabled=false;btn.textContent=loginMode==='in'?'تسجيل الدخول':'إنشاء الحساب';return;}
   var p = loginMode==='up'
-    ? firebase.auth().createUserWithEmailAndPassword(email,pass).then(function(c){
-        return c.user.updateProfile({displayName:name||email.split('@')[0]}).then(function(){
-          return db.ref('users/'+c.user.uid).set({name:name||email.split('@')[0],email:email,createdAt:Date.now()});
+    ? fb.createUserWithEmailAndPassword(fb.auth,email,pass).then(function(c){
+        return fb.updateProfile(c.user,{displayName:name||email.split('@')[0]}).then(function(){
+          return fb.set(fb.ref(db,'users/'+c.user.uid),{name:name||email.split('@')[0],email:email,createdAt:Date.now()});
         });
       })
-    : firebase.auth().signInWithEmailAndPassword(email,pass);
+    : fb.signInWithEmailAndPassword(fb.auth,email,pass);
   p.catch(function(e){
     var errs={
       'auth/user-not-found':'البريد غير مسجل — جرب إنشاء حساب جديد',
@@ -675,7 +699,7 @@ function onLogin(user){
   document.getElementById('uName').textContent=CU.name;
   document.getElementById('uEmail').textContent=CU.email;
   document.getElementById('loginWrap').style.display='none';
-  db.ref('users/'+user.uid+'/lastSeen').set(Date.now());
+  if(window._fb&&db)window._fb.set(window._fb.ref(db,'users/'+user.uid+'/lastSeen'),Date.now());
   logAct('login','تسجيل دخول','✅');
   setFirstUserAdmin(user.uid);
   updateNotifBadge();
@@ -693,13 +717,13 @@ function onLogout(){
 function logout(){
   if(!confirm('تسجيل الخروج؟'))return;
   logAct('logout','تسجيل خروج','🚪');
-  firebase.auth().signOut();
+  if(window._fb)window._fb.signOut(window._fb.auth);
 }
 
 // ── ACTIVITY ─────────────────────────────────────
 function logAct(type,desc,icon){
-  if(!actRef||!CU)return;
-  actRef.push({uid:CU.uid,name:CU.name,type:type,desc:desc,icon:icon||'📝',time:Date.now()});
+  if(!actRef||!CU||!window._fb)return;
+  window._fb.push(actRef,{uid:CU.uid,name:CU.name,type:type,desc:desc,icon:icon||'📝',time:Date.now()});
 }
 
 function timeAgo(ts){
@@ -713,11 +737,13 @@ function openActivity(){
   var list=document.getElementById('actList');
   list.innerHTML='<div class="empty"><div class="ei">⏳</div>جاري التحميل...</div>';
   openM('actModal');
-  actRef.orderByChild('time').limitToLast(100).once('value',function(snap){
+  // Use onValue once for activity
+  var fb=window._fb;if(!fb||!actRef){list.innerHTML='<div class="empty"><div class="ei">❌</div>خطأ في الاتصال</div>';return;}
+  fb.onValue(actRef,function(snap){
     var acts=[];
     snap.forEach(function(c){acts.unshift(c.val());});
     if(!acts.length){list.innerHTML='<div class="empty"><div class="ei">📋</div>لا يوجد نشاط</div>';return;}
-    list.innerHTML=acts.map(function(a){
+    list.innerHTML=acts.slice(0,50).map(function(a){
       return '<div class="actItem"><div class="actIcon">'+(a.icon||'📝')+'</div>'+
         '<div style="flex:1"><div style="font-size:13.5px;font-weight:500">'+a.desc+'</div>'+
         '<div style="font-size:12px;color:var(--mu);margin-top:2px">👤 '+(a.name||'—')+'</div></div>'+
@@ -760,17 +786,18 @@ function openMyDash(){
 // ── FIREBASE INIT ────────────────────────────────
 function initFB(){
   try{
-    firebase.initializeApp(fbCfg);
-    db=firebase.database();
-    actRef=db.ref('fintrack/activity');
-    dbRef=db.ref('fintrack/data');
+    var fb=window._fb;
+    if(!fb){setSyncStatus('err');return;}
+    db=fb.db;
+    actRef=fb.ref(db,'fintrack/activity');
+    dbRef=fb.ref(db,'fintrack/data');
     setSyncStatus('sync');
 
-    firebase.auth().onAuthStateChanged(function(user){
+    fb.onAuthStateChanged(fb.auth,function(user){
       if(user)onLogin(user);else onLogout();
     });
 
-    dbRef.on('value',function(snap){
+    fb.onValue(dbRef,function(snap){
       if(syncing)return;
       var r=snap.val();
       if(r){
@@ -791,9 +818,9 @@ function initFB(){
 }
 
 function pushFB(){
-  if(!dbRef)return;
+  if(!dbRef||!window._fb)return;
   syncing=true;setSyncStatus('sync');
-  dbRef.set({accounts:S.accounts,transactions:S.transactions,rates:S.rates,
+  window._fb.set(dbRef,{accounts:S.accounts,transactions:S.transactions,rates:S.rates,
     budgets:S.budgets||[],goals:S.goals||[],notifications:S.notifications||[]})
     .then(function(){setSyncStatus('ok');})
     .catch(function(){setSyncStatus('err');})
@@ -1630,7 +1657,8 @@ function renderUsers(){
   if(!el)return;
   if(!CU){el.innerHTML='<div class="empty"><div class="ei">🔒</div>سجل الدخول أولاً</div>';return;}
   // Check if admin
-  db.ref('users').once('value',function(snap){
+  if(!window._fb){el.innerHTML='<div class="empty"><div class="ei">❌</div>خطأ في الاتصال</div>';return;}
+  window._fb.onValue(window._fb.ref(db,'users'),function(snap){
     var users=[];
     snap.forEach(function(c){users.push({...c.val(),uid:c.key});});
     var me=users.find(function(u){return u.uid===CU.uid;});
@@ -1669,7 +1697,7 @@ function toggleRole(uid,currentRole){
   var newRole=currentRole==='admin'?'user':'admin';
   var msg=newRole==='admin'?'ترقية هذا المستخدم لمدير؟':'تحويل هذا المستخدم لمستخدم عادي؟';
   if(!confirm(msg))return;
-  db.ref('users/'+uid+'/role').set(newRole).then(function(){
+  window._fb.set(window._fb.ref(db,'users/'+uid+'/role'),newRole).then(function(){
     notify(newRole==='admin'?'✅ تم الترقية لمدير':'✅ تم التحويل لمستخدم');
     logAct('role','تغيير صلاحية مستخدم إلى '+newRole,'👑');
     renderUsers();
@@ -1678,12 +1706,13 @@ function toggleRole(uid,currentRole){
 
 // Set first user as admin automatically
 function setFirstUserAdmin(uid){
-  db.ref('users').once('value',function(snap){
-    var count=0;snap.forEach(function(){count++;});
-    if(count===1){
-      db.ref('users/'+uid+'/role').set('admin');
-    }
-  });
+  if(window._fb&&db){
+    var uRef=window._fb.ref(db,'users');
+    window._fb.onValue(uRef,function(snap){
+      var count=0;snap.forEach(function(){count++;});
+      if(count<=1){window._fb.set(window._fb.ref(db,'users/'+uid+'/role'),'admin');}
+    },{onlyOnce:true});
+  }
 }
 
 // ── NAVIGATION UPDATE ──────────────────────────────
@@ -1700,34 +1729,14 @@ fillConvSels();fillRateInputs();calc();renderRates();refreshAll();
 document.getElementById('btn-add').onclick=function(){initTxModal();openM('txModal');};
 
 // Init Firebase with retry
-var fbRetries=0;
-function tryInitFB(){
-  if(typeof firebase!=='undefined'&&firebase.app){
-    try{
-      initFB();
-      fetchRates(false);
-      setInterval(function(){fetchRates(false);},30*60*1000);
-    }catch(e){
-      console.error('FB init error:',e);
-      setSyncStatus('err');
-      showLoginError('خطأ في الاتصال: '+e.message);
-      // Allow login attempt anyway
-      document.getElementById('authBtn').disabled=false;
-    }
-  }else{
-    fbRetries++;
-    if(fbRetries<20){
-      setTimeout(tryInitFB,300);
-    }else{
-      setSyncStatus('err');
-      console.error('Firebase failed to load after retries');
-      document.getElementById('authBtn').disabled=false;
-    }
-  }
-}
-window.addEventListener('load',function(){
-  setTimeout(tryInitFB,100);
+// Firebase ready via module event
+window.addEventListener('fbReady',function(){
+  initFB();
+  fetchRates(false);
+  setInterval(function(){fetchRates(false);},30*60*1000);
 });
+// Fallback if fbReady already fired
+if(window._fb){initFB();}
 
 </script>
 </body>
