@@ -766,13 +766,14 @@ function logout(){
 function logAct(type,desc,icon){
   if(!CU)return;
   var entry={uid:CU.uid,name:CU.name,type:type,desc:desc,icon:icon||'📝',time:Date.now()};
-  // Store locally
   if(!S.activityLog)S.activityLog=[];
   S.activityLog.unshift(entry);
   if(S.activityLog.length>100)S.activityLog=S.activityLog.slice(0,100);
-  // Also push to Firebase activity ref if available
-  if(window._fb&&actRef){
-    window._fb.push(actRef,entry);
+  // Save to main data (no separate path needed - avoids permission issues)
+  saveLocal();
+  if(window._fb&&dbRef){
+    window._fb.set(window._fb.ref(db,'fintrack/data/activityLog'),S.activityLog)
+      .catch(function(){});// silent fail
   }
 }
 
@@ -1745,8 +1746,14 @@ function renderUsers(){
     return;
   }
   el.innerHTML='<div class="empty"><div class="ei">⏳</div>جاري التحميل...</div>';
+  // Timeout fallback
+  var tout=setTimeout(function(){
+    if(el.innerHTML.indexOf('⏳')>=0)
+      el.innerHTML='<div class="empty"><div class="ei">❌</div>تعذر تحميل المستخدمين - تحقق من صلاحيات Firebase</div>';
+  },5000);
   window._fb.onValue(window._fb.ref(db,'users'),function(snap){
     var users=[];
+    clearTimeout(tout);
     snap.forEach(function(c){
       var u=c.val()||{};
       u.uid=c.key;
@@ -1808,6 +1815,7 @@ function setFirstUserAdmin(uid){
     var unsubFirst=window._fb.onValue(uRef,function(snap){
       if(unsubFirst)unsubFirst();
       var count=0;snap.forEach(function(){count++;});
+      clearTimeout(tout||0);
       if(count<=1){
         window._fb.set(window._fb.ref(db,'users/'+uid+'/role'),'admin');
       }
