@@ -23,10 +23,13 @@
   const db = getDatabase(app);
   const auth = getAuth(app);
 
+  // Import password reset
+  import { sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
   // Expose to global scope
   window._fb = { db, auth, ref, set, onValue, push,
     createUserWithEmailAndPassword, signInWithEmailAndPassword,
-    signOut, onAuthStateChanged, updateProfile };
+    signOut, onAuthStateChanged, updateProfile, sendPasswordResetEmail };
 
   window.dispatchEvent(new Event('fbReady'));
 </script>
@@ -305,7 +308,10 @@ body.dark .bg-g{background:#064e3b;color:#6ee7b7}.dark .bg-r{background:#450a0a;
         <input id="iEmail" type="email" placeholder="example@email.com" style="direction:ltr" onkeydown="if(event.key==='Enter')auth()">
       </div>
       <div class="fld">
-        <label>كلمة المرور</label>
+        <label style="display:flex;justify-content:space-between;align-items:center;">
+          <span>كلمة المرور</span>
+          <span onclick="showForgotPass()" style="font-size:11px;color:#60a5fa;cursor:pointer;font-weight:500">نسيت كلمة المرور؟</span>
+        </label>
         <input id="iPass" type="password" placeholder="••••••••" style="direction:ltr" onkeydown="if(event.key==='Enter')auth()">
       </div>
       <div id="loginErr"></div>
@@ -733,6 +739,31 @@ body.dark .bg-g{background:#064e3b;color:#6ee7b7}.dark .bg-r{background:#450a0a;
 </div>
 
 <button id="fab-add" onclick="initTxModal();openM('txModal')" title="إضافة عملية">+</button>
+<!-- Forgot Password Modal -->
+<div class="ov" id="forgotModal" style="z-index:10000;">
+  <div class="modal" style="max-width:380px;">
+    <div class="mTitle" style="text-align:center;">🔑 استعادة كلمة المرور</div>
+    <div style="font-size:13px;color:var(--mu);text-align:center;margin-bottom:18px;" id="lbl-forgot-sub">
+      أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة تعيين كلمة المرور
+    </div>
+    <div class="fg">
+      <label class="form-label">البريد الإلكتروني</label>
+      <input type="email" class="fc" id="forgotEmail" placeholder="example@email.com" 
+        style="direction:ltr;font-size:15px;padding:12px 14px;"
+        onkeydown="if(event.key==='Enter')sendResetEmail()">
+    </div>
+    <div id="forgotMsg" style="display:none;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:12px;text-align:center;"></div>
+    <button class="loginBtn" onclick="sendResetEmail()" id="btn-send-reset" 
+      style="width:100%;padding:12px;background:var(--pr);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:12px;">
+      📧 إرسال رابط الاستعادة
+    </button>
+    <button onclick="closeM('forgotModal')" 
+      style="width:100%;padding:10px;background:transparent;border:1px solid var(--bd);border-radius:10px;font-size:13px;cursor:pointer;color:var(--mu);font-family:inherit;">
+      إلغاء
+    </button>
+  </div>
+</div>
+
 <div class="notif" id="notif"></div>
 
 <script>
@@ -1552,6 +1583,56 @@ function setPrimary(c,sb){
   document.querySelectorAll('#themeColors .cdot').forEach(function(d){d.classList.remove('on');});
   if(event&&event.target)event.target.classList.add('on');
   saveLocal();
+}
+
+function showForgotPass(){
+  document.getElementById('forgotEmail').value = document.getElementById('iEmail').value || '';
+  document.getElementById('forgotMsg').style.display = 'none';
+  document.getElementById('btn-send-reset').disabled = false;
+  document.getElementById('btn-send-reset').textContent = '📧 إرسال رابط الاستعادة';
+  openM('forgotModal');
+}
+
+function sendResetEmail(){
+  var email = document.getElementById('forgotEmail').value.trim();
+  var msg = document.getElementById('forgotMsg');
+  var btn = document.getElementById('btn-send-reset');
+
+  if(!email){
+    msg.style.cssText='display:block;background:#fee2e2;color:#991b1b;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:12px;text-align:center;';
+    msg.textContent = '⚠️ أدخل البريد الإلكتروني';
+    return;
+  }
+
+  if(!window._fb){
+    msg.style.cssText='display:block;background:#fee2e2;color:#991b1b;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:12px;text-align:center;';
+    msg.textContent = '❌ جاري التحميل... انتظر ثانية';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري الإرسال...';
+  msg.style.display = 'none';
+
+  window._fb.sendPasswordResetEmail(window._fb.auth, email)
+    .then(function(){
+      msg.style.cssText='display:block;background:#d1fae5;color:#065f46;padding:12px 14px;border-radius:8px;font-size:13px;margin-bottom:12px;text-align:center;';
+      msg.innerHTML = '✅ تم إرسال رابط الاستعادة!<br><span style="font-size:11px;opacity:.8;">تحقق من بريدك الإلكتروني<br>(تحقق من مجلد Spam إذا لم يصل)</span>';
+      btn.textContent = '✅ تم الإرسال';
+      // Auto close after 4 seconds
+      setTimeout(function(){ closeM('forgotModal'); }, 4000);
+    })
+    .catch(function(e){
+      var errs = {
+        'auth/user-not-found': '❌ البريد غير مسجل في النظام',
+        'auth/invalid-email': '❌ البريد الإلكتروني غير صحيح',
+        'auth/too-many-requests': '⚠️ محاولات كثيرة - انتظر قليلاً'
+      };
+      msg.style.cssText='display:block;background:#fee2e2;color:#991b1b;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:12px;text-align:center;';
+      msg.textContent = errs[e.code] || ('❌ ' + e.message);
+      btn.disabled = false;
+      btn.textContent = '📧 إرسال رابط الاستعادة';
+    });
 }
 
 function forceSyncToCloud(){
