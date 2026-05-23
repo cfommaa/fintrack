@@ -534,6 +534,14 @@ body.dark .bg-g{background:#064e3b;color:#6ee7b7}.dark .bg-r{background:#450a0a;
         <button class="btn btn-p" onclick="fetchRates(true)" style="margin-top:12px">🌐 <span id="lbl-fetchr">جلب أسعار مباشرة</span></button>
       </div>
       <div class="card">
+        <div style="font-weight:600;margin-bottom:12px;" id="lbl-sync-section">المزامنة</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-p" onclick="forceSyncToCloud()">☁️ <span id="lbl-force-sync">رفع بياناتي للسحابة</span></button>
+          <button class="btn btn-o" onclick="forceSyncFromCloud()">⬇️ <span id="lbl-force-load">تحميل من السحابة</span></button>
+        </div>
+        <div style="font-size:11px;color:var(--mu);margin-top:8px" id="lbl-sync-hint">استخدم "رفع للسحابة" إذا كانت البيانات تظهر على جهاز ولا تظهر على آخر</div>
+      </div>
+      <div class="card">
         <div style="font-weight:600;margin-bottom:10px;color:var(--da)" id="lbl-danger">منطقة الخطر</div>
         <button class="btn btn-d" onclick="clearAll()" id="btn-clear">🗑️ حذف جميع البيانات</button>
       </div>
@@ -860,26 +868,30 @@ function onLogin(user){
   if(window._fb&&db)window._fb.set(window._fb.ref(db,'users/'+user.uid+'/lastSeen'),Date.now());
   setFirstUserAdmin(user.uid);
   updateNotifBadge();
-  // Force refresh data from Firebase after login
+  // Load from Firebase first, then merge with local if Firebase is empty
   setTimeout(function(){
     if(window._fb&&dbRef){
       window._fb.onValue(dbRef,function(snap){
         var r=snap.val();
-        if(r){
-          var keep={lang:S.lang,dark:S.dark,primaryColor:S.primaryColor,sidebarColor:S.sidebarColor};
-          if(r.accounts&&r.accounts.length)S.accounts=r.accounts;
-          if(r.transactions&&r.transactions.length)S.transactions=r.transactions;
+        var keep={lang:S.lang,dark:S.dark,primaryColor:S.primaryColor,sidebarColor:S.sidebarColor};
+        if(r&&r.accounts&&r.accounts.length){
+          // Firebase has data - use it
+          S.accounts=r.accounts;
+          S.transactions=r.transactions||[];
           if(r.rates)S.rates=r.rates;
           if(r.budgets)S.budgets=r.budgets;
           if(r.goals)S.goals=r.goals;
           if(r.notifications)S.notifications=r.notifications;
           if(r.activityLog)S.activityLog=r.activityLog;
-          Object.assign(S,keep);
-          saveLocal();refreshAll();fillRateInputs();
+        } else if(S.accounts&&S.accounts.length){
+          // Firebase empty but local has data - push local to Firebase
+          pushFB();
         }
+        Object.assign(S,keep);
+        saveLocal();refreshAll();fillRateInputs();
       },{onlyOnce:true});
     }
-  },500);
+  },800);
   logAct('login','تسجيل دخول','✅');
   notify('مرحباً '+CU.name+' 👋');
 }
@@ -1540,6 +1552,41 @@ function setPrimary(c,sb){
   document.querySelectorAll('#themeColors .cdot').forEach(function(d){d.classList.remove('on');});
   if(event&&event.target)event.target.classList.add('on');
   saveLocal();
+}
+
+function forceSyncToCloud(){
+  if(!window._fb||!dbRef){notify('❌ غير متصل بالسحابة');return;}
+  if(!S.accounts||!S.accounts.length){notify('لا توجد بيانات محلية للرفع');return;}
+  setSyncStatus('sync');
+  var data={
+    accounts:S.accounts||[],transactions:S.transactions||[],
+    rates:S.rates,budgets:S.budgets||[],goals:S.goals||[],
+    notifications:S.notifications||[],activityLog:S.activityLog||[]
+  };
+  window._fb.set(dbRef,data)
+    .then(function(){
+      setSyncStatus('ok');
+      notify('✅ تم رفع البيانات للسحابة - ستظهر على جميع الأجهزة');
+    })
+    .catch(function(e){setSyncStatus('err');notify('❌ فشل الرفع: '+e.message);});
+}
+
+function forceSyncFromCloud(){
+  if(!window._fb||!dbRef){notify('❌ غير متصل');return;}
+  notify('⏳ جاري التحميل من السحابة...');
+  window._fb.onValue(dbRef,function(snap){
+    var r=snap.val();
+    if(r&&r.accounts&&r.accounts.length){
+      var keep={lang:S.lang,dark:S.dark,primaryColor:S.primaryColor,sidebarColor:S.sidebarColor};
+      S.accounts=r.accounts;S.transactions=r.transactions||[];
+      if(r.rates)S.rates=r.rates;if(r.budgets)S.budgets=r.budgets;
+      if(r.goals)S.goals=r.goals;if(r.notifications)S.notifications=r.notifications;
+      Object.assign(S,keep);saveLocal();refreshAll();fillRateInputs();
+      notify('✅ تم تحميل البيانات من السحابة');
+    } else {
+      notify('لا توجد بيانات في السحابة بعد');
+    }
+  },{onlyOnce:true});
 }
 
 function clearAll(){
