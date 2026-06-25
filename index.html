@@ -1056,11 +1056,27 @@ function onLogout(){
 }
 
 function logout(){
-  if(!confirm('تسجيل الخروج؟'))return;
-  logAct('logout','تسجيل خروج','🚪');
-  if(window._fb)window._fb.signOut(window._fb.auth);
-}
+  if(!confirm('تسجيل الخروج؟')) return;
 
+  logAct('logout','تسجيل خروج','🚪');
+
+  if(!window._fb || !window._fb.auth){
+    notify('خطأ في تسجيل الخروج');
+    return;
+  }
+
+  window._fb.signOut(window._fb.auth)
+    .then(function(){
+      CU = null;
+      isAdmin = false;
+      notify('تم تسجيل الخروج');
+      location.reload();
+    })
+    .catch(function(err){
+      console.error(err);
+      notify('حدث خطأ أثناء تسجيل الخروج');
+    });
+}
 // ── ACTIVITY ─────────────────────────────────────
 function logAct(type,desc,icon){
   if(!CU)return;
