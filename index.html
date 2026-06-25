@@ -7,7 +7,7 @@
 <script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=vEZ0YyT5MTsqlMqYYQ77H4UbYN9sRPDBssMh2iwD_A6uXSaOBux4hKjEuQN1yBIgmMKVXwtlc20Wk5VPwQ-YmWD7eUhzmIYMCVsrURGhRhpQjWNeYYvUrna_bBhXmSIIz16Z_22ebG7LqwH1oJxd8BaEW3HiQfFdl1b1JrdmacbOyKLhTbRinEUjG5eqbt06REe9PDMPvVlIvAIvWg_DO09NPj9gzdzy-3bEm3MJLPE7PLtZQRtxOCZQa00HkekK7-RDcnPby91XxJXe6GTiJQs_VpG5gZ1N1sFqs37rLxq-0HUoFN4pbgwD_hBMFEtY" charset="UTF-8"></script><script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getDatabase, ref, set, onValue, push } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, sendEmailVerification } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
   const fbCfg = {
     apiKey: "AIzaSyDAbWoJoIobem3j2uHUQd6tsqscXOIk-uc",
@@ -27,9 +27,9 @@
   import { sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
   // Expose to global scope
-  window._fb = { db, auth, ref, set, onValue, push,
-    createUserWithEmailAndPassword, signInWithEmailAndPassword,
-    signOut, onAuthStateChanged, updateProfile, sendPasswordResetEmail };
+window._fb = { db, auth, ref, set, onValue, push,
+  createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  signOut, onAuthStateChanged, updateProfile, sendEmailVerification, sendPasswordResetEmail };
 
   window.dispatchEvent(new Event('fbReady'));
 </script>
@@ -877,39 +877,100 @@ function auth(){
   var pass=document.getElementById('iPass').value;
   var name=document.getElementById('iName').value.trim();
   var btn=document.getElementById('authBtn');
-  if(!email||!pass){showErr('أدخل البريد وكلمة المرور');return;}
+
+  if(!email||!pass){
+    showErr('أدخل البريد وكلمة المرور');
+    return;
+  }
+
   if(!window._fb||!db){
     showErr('جاري تحميل البرنامج... انتظر 3 ثوانٍ وحاول مرة أخرى');
     return;
   }
-  btn.disabled=true;btn.textContent='جاري...';
+
+  btn.disabled=true;
+  btn.textContent='جاري...';
   document.getElementById('loginErr').style.display='none';
+
   var fb=window._fb;
-  if(!fb){showErr('جاري التحميل... انتظر ثانية وحاول مرة أخرى');btn.disabled=false;btn.textContent=loginMode==='in'?'تسجيل الدخول':'إنشاء الحساب';return;}
-  var p = loginMode==='up'
-    ? fb.createUserWithEmailAndPassword(fb.auth,email,pass).then(function(c){
-        return fb.updateProfile(c.user,{displayName:name||email.split('@')[0]}).then(function(){
-          return fb.set(fb.ref(db,'users/'+c.user.uid),{name:name||email.split('@')[0],email:email,createdAt:Date.now()});
+
+  if(loginMode==='up'){
+
+    fb.createUserWithEmailAndPassword(fb.auth,email,pass)
+      .then(function(c){
+        return fb.updateProfile(c.user,{
+          displayName:name||email.split('@')[0]
+        }).then(function(){
+          return fb.set(
+            fb.ref(db,'users/'+c.user.uid),
+            {
+              name:name||email.split('@')[0],
+              email:email,
+              role:'user',
+              emailVerified:false,
+              createdAt:Date.now()
+            }
+          ).then(function(){
+            return fb.sendEmailVerification(c.user);
+          }).then(function(){
+            return fb.signOut(fb.auth);
+          });
         });
       })
-    : fb.signInWithEmailAndPassword(fb.auth,email,pass);
-  p.catch(function(e){
-    var errs={
-      'auth/user-not-found':'البريد غير مسجل — جرب إنشاء حساب جديد',
-      'auth/wrong-password':'كلمة المرور خاطئة',
-      'auth/email-already-in-use':'البريد مسجل مسبقاً — سجل الدخول',
-      'auth/weak-password':'كلمة المرور ضعيفة (6 أحرف على الأقل)',
-      'auth/invalid-email':'البريد الإلكتروني غير صحيح',
-      'auth/invalid-credential':'البريد أو كلمة المرور خاطئة',
-      'auth/network-request-failed':'خطأ في الشبكة — تحقق من الاتصال',
-      'auth/too-many-requests':'محاولات كثيرة — انتظر قليلاً'
-    };
-    showErr(errs[e.code]||('خطأ: '+e.message));
-    btn.disabled=false;
-    btn.textContent=loginMode==='in'?'تسجيل الدخول':'إنشاء الحساب';
-  });
-}
+      .then(function(){
+        showErr('تم إنشاء الحساب. تم إرسال رابط التفعيل إلى بريدك الإلكتروني. فعّل البريد ثم سجل الدخول.');
+        btn.disabled=false;
+        btn.textContent='تسجيل الدخول';
+        loginMode='in';
+        setTab('in');
+      })
+      .catch(function(e){
+        var errs={
+          'auth/email-already-in-use':'البريد مسجل مسبقاً — سجل الدخول',
+          'auth/weak-password':'كلمة المرور ضعيفة (6 أحرف على الأقل)',
+          'auth/invalid-email':'البريد الإلكتروني غير صحيح',
+          'auth/network-request-failed':'خطأ في الشبكة — تحقق من الاتصال',
+          'auth/too-many-requests':'محاولات كثيرة — انتظر قليلاً'
+        };
 
+        showErr(errs[e.code]||('خطأ: '+e.message));
+        btn.disabled=false;
+        btn.textContent='إنشاء الحساب';
+      });
+
+    return;
+  }
+
+  fb.signInWithEmailAndPassword(fb.auth,email,pass)
+    .then(function(c){
+      if(!c.user.emailVerified){
+        return fb.signOut(fb.auth).then(function(){
+          showErr('يجب تفعيل البريد الإلكتروني أولاً. تحقق من بريدك ثم سجل الدخول.');
+          btn.disabled=false;
+          btn.textContent='تسجيل الدخول';
+        });
+      }
+
+      return fb.set(
+        fb.ref(db,'users/'+c.user.uid+'/emailVerified'),
+        true
+      );
+    })
+    .catch(function(e){
+      var errs={
+        'auth/user-not-found':'البريد غير مسجل — جرب إنشاء حساب جديد',
+        'auth/wrong-password':'كلمة المرور خاطئة',
+        'auth/invalid-email':'البريد الإلكتروني غير صحيح',
+        'auth/invalid-credential':'البريد أو كلمة المرور خاطئة',
+        'auth/network-request-failed':'خطأ في الشبكة — تحقق من الاتصال',
+        'auth/too-many-requests':'محاولات كثيرة — انتظر قليلاً'
+      };
+
+      showErr(errs[e.code]||('خطأ: '+e.message));
+      btn.disabled=false;
+      btn.textContent='تسجيل الدخول';
+    });
+}
 function onLogin(user){
   CU={
     uid:user.uid,
