@@ -548,6 +548,31 @@ body.dark .bg-g{background:#064e3b;color:#6ee7b7}.dark .bg-r{background:#450a0a;
         <div style="font-size:11px;color:var(--mu);margin-top:8px" id="lbl-sync-hint">استخدم "رفع للسحابة" إذا كانت البيانات تظهر على جهاز ولا تظهر على آخر</div>
       </div>
       <div class="card">
+  <div style="font-weight:600;margin-bottom:12px;">النسخ الاحتياطي</div>
+
+  <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    <button class="btn btn-p" onclick="backupJSON()">
+      ⬇️ تصدير Backup
+    </button>
+
+    <button class="btn btn-o" onclick="document.getElementById('restoreFile').click()">
+      ⬆️ استيراد Backup
+    </button>
+
+    <input
+      type="file"
+      id="restoreFile"
+      accept=".json,application/json"
+      style="display:none"
+      onchange="restoreJSON(event)"
+    >
+  </div>
+
+  <div style="font-size:11px;color:var(--mu);margin-top:8px">
+    حفظ واسترجاع نسخة احتياطية كاملة للنظام
+  </div>
+</div>
+      <div class="card">
         <div style="font-weight:600;margin-bottom:10px;color:var(--da)" id="lbl-danger">منطقة الخطر</div>
         <button class="btn btn-d" onclick="clearAll()" id="btn-clear">🗑️ حذف جميع البيانات</button>
       </div>
@@ -2405,7 +2430,88 @@ function exportStatementExcel(){
   a.click();
   notify('✅ تم تصدير كشف الحساب');
 }
+function backupJSON(){
+  if(!CU){
+    notify('سجل الدخول أولاً');
+    return;
+  }
 
+  var data = {
+    exportedAt: new Date().toISOString(),
+    user: {
+      uid: CU.uid,
+      name: CU.name,
+      email: CU.email
+    },
+    data: S
+  };
+
+  var blob = new Blob(
+    [JSON.stringify(data,null,2)],
+    {type:'application/json'}
+  );
+
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  var d = new Date().toISOString().slice(0,10);
+
+  a.href = url;
+  a.download = 'fintrack-backup-' + d + '.json';
+
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+
+  URL.revokeObjectURL(url);
+
+  notify('✅ تم إنشاء النسخة الاحتياطية');
+}
+
+function restoreJSON(event){
+  var file = event.target.files[0];
+
+  if(!file)return;
+
+  if(!CU){
+    notify('سجل الدخول أولاً');
+    return;
+  }
+
+  if(!confirm('سيتم استبدال البيانات الحالية. هل تريد المتابعة؟')){
+    event.target.value='';
+    return;
+  }
+
+  var reader = new FileReader();
+
+  reader.onload = function(e){
+    try{
+      var parsed = JSON.parse(e.target.result);
+      var data = parsed.data || parsed;
+
+      if(!data.accounts){
+        notify('ملف النسخة الاحتياطية غير صالح');
+        return;
+      }
+
+      S = Object.assign(S,data);
+
+      saveLocal();
+      pushFB();
+      refreshAll();
+      fillRateInputs();
+
+      notify('✅ تم استيراد النسخة الاحتياطية');
+
+    }catch(err){
+      notify('خطأ في ملف النسخة الاحتياطية');
+    }
+
+    event.target.value='';
+  };
+
+  reader.readAsText(file);
+}
 
 // ── INIT ─────────────────────────────────────────────
 loadLocal();
