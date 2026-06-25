@@ -790,6 +790,7 @@ var S = {
   rates:{SAR:1,USD:3.75,EUR:4.05,GBP:4.75,CAD:2.75,AED:1.02,EGP:0.076,KWD:12.20,BHD:9.95,QAR:1.03,OMR:9.74,JOD:5.29}
 };
 var CU = null; // current user {uid,name,email,initials}
+var isAdmin = false; // true فقط لحساب المدير
 var db = null, dbRef = null, actRef = null, syncing = false;
 var loginMode = 'in';
 var editingAccId = null;
@@ -885,28 +886,56 @@ function auth(){
 }
 
 function onLogin(user){
-  CU={uid:user.uid,name:user.displayName||user.email.split('@')[0],email:user.email,
-      initials:(user.displayName||user.email).substring(0,2).toUpperCase()};
+  CU={
+    uid:user.uid,
+    name:user.displayName||user.email.split('@')[0],
+    email:user.email,
+    initials:(user.displayName||user.email).substring(0,2).toUpperCase()
+  };
+
+  // حساب المدير فقط
+  isAdmin = (user.uid === 'uD2YuFHmwVZ4xW0IEDfkiMuBKxe2');
+
+  var navUsers = document.getElementById('nav-users');
+  if(navUsers){
+    navUsers.style.display = isAdmin ? '' : 'none';
+  }
+
   document.getElementById('uAvatar').textContent=CU.initials;
   document.getElementById('uName').textContent=CU.name;
   document.getElementById('uEmail').textContent=CU.email;
   document.getElementById('uAvatarTop').textContent=CU.initials;
+
   var nw=document.getElementById('uNameTopWrap');
   if(nw)nw.style.display='block';
+
   var nt=document.getElementById('uNameTop');
   if(nt)nt.textContent=CU.name;
+
   document.getElementById('loginWrap').style.display='none';
-  if(window._fb&&db)window._fb.set(window._fb.ref(db,'users/'+user.uid+'/lastSeen'),Date.now());
+
+  if(window._fb&&db){
+    window._fb.set(
+      window._fb.ref(db,'users/'+user.uid+'/lastSeen'),
+      Date.now()
+    );
+  }
+
   setFirstUserAdmin(user.uid);
   updateNotifBadge();
-  // Load from Firebase first, then merge with local if Firebase is empty
+
   setTimeout(function(){
     if(window._fb&&dbRef){
       window._fb.onValue(dbRef,function(snap){
         var r=snap.val();
-        var keep={lang:S.lang,dark:S.dark,primaryColor:S.primaryColor,sidebarColor:S.sidebarColor};
+        var keep={
+          lang:S.lang,
+          dark:S.dark,
+          primaryColor:S.primaryColor,
+          sidebarColor:S.sidebarColor
+        };
+
         if(r&&r.accounts&&r.accounts.length){
-          // Firebase has data - use it
           S.accounts=r.accounts;
           S.transactions=r.transactions||[];
           if(r.rates)S.rates=r.rates;
@@ -914,19 +943,21 @@ function onLogin(user){
           if(r.goals)S.goals=r.goals;
           if(r.notifications)S.notifications=r.notifications;
           if(r.activityLog)S.activityLog=r.activityLog;
-        } else if(S.accounts&&S.accounts.length){
-          // Firebase empty but local has data - push local to Firebase
+        }else if(S.accounts&&S.accounts.length){
           pushFB();
         }
+
         Object.assign(S,keep);
-        saveLocal();refreshAll();fillRateInputs();
+        saveLocal();
+        refreshAll();
+        fillRateInputs();
       },{onlyOnce:true});
     }
   },800);
+
   logAct('login','تسجيل دخول','✅');
   notify('مرحباً '+CU.name+' 👋');
 }
-
 function onLogout(){
   CU=null;
   document.getElementById('loginWrap').style.display='flex';
@@ -1701,25 +1732,45 @@ var PTITLES={
 };
 
 function go(page){
-  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on');});
-  document.querySelectorAll('.nav').forEach(function(n){n.classList.remove('on');});
-  var pageEl=document.getElementById('page-'+page);
-  var navEl=document.getElementById('nav-'+page);
-  if(pageEl)pageEl.classList.add('on');
-  if(navEl)navEl.classList.add('on');
-  var t=PTITLES[page];
-  document.getElementById('pageTitle').textContent=t?t[S.lang]||t.ar:page;
-  if(page==='tx')renderTx();
-  if(page==='dash')renderDash();
-  if(page==='acc')renderAccounts();
-  if(page==='conv'){calc();renderRates();}
-  if(page==='rep')renderRep(curRepTab);
-  if(page==='budgets')renderBudgets();
-  if(page==='goals')renderGoals();
-  if(page==='notif'){renderNotifications();markAllRead();}
-  if(page==='users')renderUsers();
-}
 
+  if(page === 'users' && !isAdmin){
+    notify('هذه الصفحة للمدير فقط');
+    return;
+  }
+
+  document.querySelectorAll('.page').forEach(function(p){
+    p.classList.remove('on');
+  });
+
+  document.querySelectorAll('.nav').forEach(function(n){
+    n.classList.remove('on');
+  });
+
+  var pageEl = document.getElementById('page-' + page);
+  var navEl = document.getElementById('nav-' + page);
+
+  if(pageEl) pageEl.classList.add('on');
+  if(navEl) navEl.classList.add('on');
+
+  var t = PTITLES[page];
+  document.getElementById('pageTitle').textContent = t ? t[S.lang] || t.ar : page;
+
+  if(page === 'tx') renderTx();
+  if(page === 'dash') renderDash();
+  if(page === 'acc') renderAccounts();
+  if(page === 'conv'){
+    calc();
+    renderRates();
+  }
+  if(page === 'rep') renderRep(curRepTab);
+  if(page === 'budgets') renderBudgets();
+  if(page === 'goals') renderGoals();
+  if(page === 'notif'){
+    renderNotifications();
+    markAllRead();
+  }
+  if(page === 'users') renderUsers();
+}
 // ── LANG ─────────────────────────────────────────
 var L={
   ar:{'lbl-sub':'نظام متابعة الرصيد المشترك','tab-in':'تسجيل الدخول','tab-up':'إنشاء حساب','s-main':'الرئيسية','lbl-dash':'لوحة التحكم','lbl-acc':'الحسابات','lbl-tx':'العمليات','lbl-conv':'تحويل العملات','s-rep':'التقارير','lbl-rep':'التقارير','s-act':'النشاط','lbl-act':'سجل النشاط','lbl-me':'لوحتي','s-set':'الإعدادات','lbl-set':'الإعدادات','btn-actlog':'📋 النشاط','btn-me':'👤 لوحتي','lbl-accsum':'ملخص الحسابات','btn-all':'عرض الكل','lbl-recenttx':'آخر العمليات','lbl-acctitle':'دليل الحسابات','btn-newacc':'+ حساب جديد','lbl-txtitle':'سجل العمليات','btn-exp':'📥 تصدير','opt-dep':'إيداع','opt-wth':'صرف','th-dt':'التاريخ','th-ac':'الحساب','th-tp':'النوع','th-am':'المبلغ','th-bl':'الرصيد بعد','th-by':'بواسطة','th-nt':'ملاحظة','th-ac2':'إجراء','lbl-convtitle':'تحويل العملات','lbl-from':'من العملة','lbl-camount':'المبلغ','lbl-to':'إلى العملة','lbl-rate':'سعر الصرف','lbl-res':'النتيجة','lbl-ratesTitle':'أسعار الصرف (من SAR)','lbl-reptitle':'التقارير','rt-sum':'ملخص الأرصدة','rt-hist':'تاريخ العمليات','rt-cur':'حسب العملة','lbl-settitle':'الإعدادات','lbl-appear':'المظهر','lbl-mode':'الوضع','lbl-light':'فاتح','lbl-dark':'داكن','lbl-color':'لون الثيم','lbl-rset':'أسعار الصرف','lbl-fetchr':'جلب أسعار مباشرة','lbl-danger':'منطقة الخطر','btn-clear':'🗑️ حذف جميع البيانات','accModalTitle':'إضافة حساب جديد','lbl-aname':'اسم الحساب','lbl-aowner':'صاحب الحساب','lbl-acur':'العملات','lbl-abal':'الرصيد الابتدائي','lbl-acolor':'لون الحساب','btn-canacc':'إلغاء','btn-saveacc':'حفظ','txModalTitle':'إضافة عملية','lbl-txacc':'الحساب','lbl-txtype':'نوع العملية','lbl-dep':'إيداع','lbl-wth':'صرف','lbl-txcur':'العملة','lbl-txamt':'المبلغ','lbl-txdate':'التاريخ','lbl-txnote':'ملاحظة','btn-cantx':'إلغاء','btn-savetx':'تنفيذ','lbl-prev':'الرصيد بعد العملية:','lbl-edittx':'تعديل العملية','lbl-editamt':'المبلغ','lbl-editnote':'الملاحظة','btn-canedit':'إلغاء','btn-saveedit':'حفظ','lbl-actlog':'سجل نشاط المستخدمين','lbl-mydash':'لوحتي الشخصية','btn-add':'+ إضافة عملية','btn-lang-top':'EN'},
