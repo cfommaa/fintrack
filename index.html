@@ -2073,43 +2073,50 @@ function checkBudgetAlerts(){
 function renderUsers(){
   var el=document.getElementById('usersTable');
   var warn=document.getElementById('adminWarn');
+
   if(!el)return;
+
   if(!CU){
     el.innerHTML='<div class="empty"><div class="ei">🔒</div>سجل الدخول أولاً</div>';
     return;
   }
+
+  if(!isAdmin){
+    if(warn)warn.style.display='block';
+    el.innerHTML='<div class="empty"><div class="ei">🔒</div>هذه الصفحة للمدير فقط</div>';
+    return;
+  }
+
+  if(warn)warn.style.display='none';
+
   if(!window._fb||!db){
     el.innerHTML='<div class="empty"><div class="ei">❌</div>جاري الاتصال... حاول مرة أخرى</div>';
     return;
   }
+
   el.innerHTML='<div class="empty"><div class="ei">⏳</div>جاري التحميل...</div>';
-  // Timeout fallback
+
   var tout=setTimeout(function(){
-    if(el.innerHTML.indexOf('⏳')>=0)
+    if(el.innerHTML.indexOf('⏳')>=0){
       el.innerHTML='<div class="empty"><div class="ei">❌</div>تعذر تحميل المستخدمين - تحقق من صلاحيات Firebase</div>';
+    }
   },5000);
+
   window._fb.onValue(window._fb.ref(db,'users'),function(snap){
     var users=[];
     clearTimeout(tout);
+
     snap.forEach(function(c){
       var u=c.val()||{};
       u.uid=c.key;
       users.push(u);
     });
-    var me=users.find(function(u){return u.uid===CU.uid;});
-    var isAdmin=me&&me.role==='admin';
-    if(warn)warn.style.display=isAdmin?'none':'block';
-    if(!isAdmin){
-      el.innerHTML='<div class="empty"><div class="ei">🔒</div>'+
-        '<div style="margin-bottom:14px">هذه الصفحة للمدير فقط</div>'+
-        '<button class="btn btn-p" onclick="makeCurrentUserAdmin()">طلب صلاحية المدير (إذا لم يكن هناك مدير)</button>'+
-      '</div>';
-      return;
-    }
+
     if(!users.length){
       el.innerHTML='<div class="empty"><div class="ei">👥</div>لا يوجد مستخدمون بعد</div>';
       return;
     }
+
     el.innerHTML='<div class="card" style="padding:0;overflow:hidden"><div class="tw"><table><thead><tr>'+
       '<th>المستخدم</th><th>البريد</th><th>الدور</th><th>آخر دخول</th><th>إجراء</th>'+
       '</tr></thead><tbody>'+
@@ -2118,6 +2125,7 @@ function renderUsers(){
         var txCount=S.transactions.filter(function(t){return t.createdBy===u.uid;}).length;
         var role=u.role||'user';
         var initials=((u.name||u.email||'?').substring(0,2)).toUpperCase();
+
         return '<tr>'+
           '<td><div style="display:flex;align-items:center;gap:8px">'+
             '<div style="width:32px;height:32px;border-radius:50%;background:var(--pr);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700">'+initials+'</div>'+
@@ -2134,17 +2142,36 @@ function renderUsers(){
         '</tr>';
       }).join('')+
       '</tbody></table></div></div>';
+
   },{onlyOnce:true});
 }
-
 function toggleRole(uid,currentRole){
-  var newRole=currentRole==='admin'?'user':'admin';
-  var msg=newRole==='admin'?'ترقية هذا المستخدم لمدير؟':'تحويل هذا المستخدم لمستخدم عادي؟';
+  if(!isAdmin){
+    notify('غير مسموح — هذه الصلاحية للمدير فقط');
+    return;
+  }
+
+  if(!CU || uid === CU.uid){
+    notify('لا يمكن تعديل صلاحية حسابك الحالي');
+    return;
+  }
+
+  var newRole = currentRole === 'admin' ? 'user' : 'admin';
+  var msg = newRole === 'admin'
+    ? 'ترقية هذا المستخدم لمدير؟'
+    : 'تحويل هذا المستخدم لمستخدم عادي؟';
+
   if(!confirm(msg))return;
-  window._fb.set(window._fb.ref(db,'users/'+uid+'/role'),newRole).then(function(){
-    notify(newRole==='admin'?'✅ تم الترقية لمدير':'✅ تم التحويل لمستخدم');
-    logAct('role','تغيير صلاحية مستخدم إلى '+newRole,'👑');
+
+  window._fb.set(
+    window._fb.ref(db,'users/' + uid + '/role'),
+    newRole
+  ).then(function(){
+    notify(newRole === 'admin' ? '✅ تم الترقية لمدير' : '✅ تم التحويل لمستخدم');
+    logAct('role','تغيير صلاحية مستخدم إلى ' + newRole,'👑');
     renderUsers();
+  }).catch(function(){
+    notify('حدث خطأ أثناء تغيير الصلاحية');
   });
 }
 
