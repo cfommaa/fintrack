@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FinTrack Cloud</title>
-<script type="module">
+<script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=vEZ0YyT5MTsqlMqYYQ77H4UbYN9sRPDBssMh2iwD_A6uXSaOBux4hKjEuQN1yBIgmMKVXwtlc20Wk5VPwQ-YmWD7eUhzmIYMCVsrURGhRhpQjWNeYYvUrna_bBhXmSIIz16Z_22ebG7LqwH1oJxd8BaEW3HiQfFdl1b1JrdmacbOyKLhTbRinEUjG5eqbt06REe9PDMPvVlIvAIvWg_DO09NPj9gzdzy-3bEm3MJLPE7PLtZQRtxOCZQa00HkekK7-RDcnPby91XxJXe6GTiJQs_VpG5gZ1N1sFqs37rLxq-0HUoFN4pbgwD_hBMFEtY" charset="UTF-8"></script><script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getDatabase, ref, set, onValue, push } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
   import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -954,7 +954,7 @@ function logAct(type,desc,icon){
   // Save to main data (no separate path needed - avoids permission issues)
   saveLocal();
   if(window._fb&&dbRef){
-    window._fb.set(window._fb.ref(db,'fintrack/data/activityLog'),S.activityLog)
+    window._fb.set(window._fb.ref(db,'fintrack/users/' + CU.uid + '/data/activityLog'),S.activityLog)
       .catch(function(){});// silent fail
   }
 }
@@ -1043,32 +1043,40 @@ function initFB(){
     var fb=window._fb;
     if(!fb){setSyncStatus('err');return;}
     db=fb.db;
-    actRef=fb.ref(db,'fintrack/activity');
-    dbRef=fb.ref(db,'fintrack/data');
     setSyncStatus('sync');
 
     fb.onAuthStateChanged(fb.auth,function(user){
-      if(user)onLogin(user);else onLogout();
-    });
+      if(user){
+        // مهم: كل مستخدم له مسار مستقل داخل Firebase
+        dbRef = fb.ref(db, 'fintrack/users/' + user.uid + '/data');
+        actRef = fb.ref(db, 'fintrack/users/' + user.uid + '/activity');
 
-    fb.onValue(dbRef,function(snap){
-      var r=snap.val();
-      if(r){
-        var keep={lang:S.lang,dark:S.dark,primaryColor:S.primaryColor,sidebarColor:S.sidebarColor};
-        if(r.accounts&&r.accounts.length)S.accounts=r.accounts;
-        if(r.transactions&&r.transactions.length)S.transactions=r.transactions;
-        if(r.rates)S.rates=r.rates;
-        if(r.budgets)S.budgets=r.budgets;
-        if(r.goals)S.goals=r.goals;
-        if(r.notifications)S.notifications=r.notifications;
-        if(r.activityLog)S.activityLog=r.activityLog;
-        Object.assign(S,keep);
-        saveLocal();
-        if(!syncing){refreshAll();fillRateInputs();}
+        onLogin(user);
+
+        fb.onValue(dbRef,function(snap){
+          var r=snap.val();
+          if(r){
+            var keep={lang:S.lang,dark:S.dark,primaryColor:S.primaryColor,sidebarColor:S.sidebarColor};
+            if(r.accounts&&r.accounts.length)S.accounts=r.accounts;
+            if(r.transactions&&r.transactions.length)S.transactions=r.transactions;
+            if(r.rates)S.rates=r.rates;
+            if(r.budgets)S.budgets=r.budgets;
+            if(r.goals)S.goals=r.goals;
+            if(r.notifications)S.notifications=r.notifications;
+            if(r.activityLog)S.activityLog=r.activityLog;
+            Object.assign(S,keep);
+            saveLocal();
+            if(!syncing){refreshAll();fillRateInputs();}
+          }
+          setSyncStatus('ok');
+          syncing=false;
+        },function(){setSyncStatus('err');syncing=false;});
+      }else{
+        dbRef = null;
+        actRef = null;
+        onLogout();
       }
-      setSyncStatus('ok');
-      syncing=false;
-    },function(){setSyncStatus('err');syncing=false;});
+    });
 
   }catch(e){setSyncStatus('err');console.error('FB:',e);}
 }
@@ -2096,7 +2104,6 @@ function setFirstUserAdmin(uid){
     var unsubFirst=window._fb.onValue(uRef,function(snap){
       if(unsubFirst)unsubFirst();
       var count=0;snap.forEach(function(){count++;});
-      clearTimeout(tout||0);
       if(count<=1){
         window._fb.set(window._fb.ref(db,'users/'+uid+'/role'),'admin');
       }
